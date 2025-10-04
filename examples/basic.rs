@@ -46,6 +46,7 @@ fn startup(mut commands: Commands, assets: Res<AssetServer>) {
                     Ruby {
                         rt: rt.into(),
                         position,
+                        font_size_scale: 0.5,
                     },
                 ));
             } else {
@@ -131,41 +132,42 @@ fn startup(mut commands: Commands, assets: Res<AssetServer>) {
                 },
             ));
 
-            let text_font = TextFont {
-                font: font.clone(),
-                line_height: LineHeight::RelativeToFont(1.4),
-                ..default()
-            };
-
             parent
                 .spawn((
-                    Text(String::new()),
-                    text_font.clone(),
-                    UiRotator(0.0),
                     Node {
+                        border: UiRect::all(Val::Px(10.0)),
                         margin: UiRect::top(px(100.0)),
+                        padding: UiRect::all(px(10.0)),
                         ..default()
                     },
+                    UiRotator(0.0),
+                    BorderColor::all(Color::BLACK),
                 ))
                 .with_children(|parent| {
-                    parent.spawn((TextSpan::new("とある"), text_font.clone()));
-                    parent.spawn((
-                        TextSpan::new("科学"),
-                        text_font.clone(),
-                        Ruby {
-                            rt: "かがく".into(),
-                            position: RubyPosition::Over,
-                        },
-                    ));
-                    parent.spawn((TextSpan::new("の\n"), text_font.clone()));
-                    parent.spawn((
-                        TextSpan::new("超電磁砲"),
-                        text_font.clone(),
-                        Ruby {
-                            rt: "レールガン".into(),
-                            position: RubyPosition::Under,
-                        },
-                    ));
+                    parent
+                        .spawn((Text(String::new()), text_font.clone()))
+                        .with_children(|parent| {
+                            parent.spawn((TextSpan::new("とある"), text_font.clone()));
+                            parent.spawn((
+                                TextSpan::new("科学"),
+                                text_font.clone(),
+                                Ruby {
+                                    rt: "かがく".into(),
+                                    position: RubyPosition::Over,
+                                    font_size_scale: 0.5,
+                                },
+                            ));
+                            parent.spawn((TextSpan::new("の\n"), text_font.clone()));
+                            parent.spawn((
+                                TextSpan::new("超電磁砲"),
+                                text_font.clone(),
+                                Ruby {
+                                    rt: "レールガン".into(),
+                                    position: RubyPosition::Under,
+                                    font_size_scale: 0.8,
+                                },
+                            ));
+                        });
                 });
         });
 

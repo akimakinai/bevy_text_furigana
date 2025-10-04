@@ -4,18 +4,35 @@ pub struct FuriganaPlugin;
 
 impl Plugin for FuriganaPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(PostUpdate, update_furigana.after(UiSystems::Layout))
+        app.add_systems(PostUpdate, update_ruby.after(UiSystems::Layout))
             .add_observer(add_ruby)
             .add_observer(add_ruby_text_span)
             .add_observer(remove_ruby);
     }
 }
 
-#[derive(Component, Clone, Debug, Default)]
+#[derive(Component, Clone, Debug)]
 #[require(RubyText(Entity::PLACEHOLDER))]
 pub struct Ruby {
     pub rt: String,
     pub position: RubyPosition,
+    pub font_size_scale: f32,
+}
+
+impl Ruby {
+    pub fn new(rt: impl Into<String>) -> Self {
+        Self {
+            rt: rt.into(),
+            position: RubyPosition::default(),
+            font_size_scale: 0.5,
+        }
+    }
+}
+
+impl Default for Ruby {
+    fn default() -> Self {
+        Self::new(String::new())
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
@@ -38,7 +55,7 @@ fn add_ruby(
     commands: Commands,
 ) {
     if let Ok((ruby, text_font, &ChildOf(parent))) = ruby.get(on.entity) {
-        create_ruby_text(on, commands, parent, ruby, text_font);
+        create_ruby_text(on, commands, parent, ruby, text_font, ruby.font_size_scale);
     }
 }
 
@@ -62,7 +79,14 @@ fn add_ruby_text_span(
             return;
         };
 
-        create_ruby_text(on, commands, grandparent, ruby, text_font);
+        create_ruby_text(
+            on,
+            commands,
+            grandparent,
+            ruby,
+            text_font,
+            ruby.font_size_scale,
+        );
     }
 }
 
@@ -72,6 +96,7 @@ fn create_ruby_text(
     parent: Entity,
     ruby: &Ruby,
     text_font: &TextFont,
+    font_size_scale: f32,
 ) {
     let rt_id = commands
         .spawn((
@@ -81,7 +106,7 @@ fn create_ruby_text(
                 position_type: PositionType::Absolute,
                 ..default()
             },
-            ruby_text_font(text_font),
+            ruby_text_font(text_font, font_size_scale),
             // Initially hidden to avoid flicker before positioned
             Visibility::Hidden,
         ))
@@ -99,16 +124,14 @@ fn remove_ruby(on: On<Remove, Ruby>, ruby_text: Query<&RubyText>, mut commands: 
     }
 }
 
-const RUBY_FONT_SIZE_SCALE: f32 = 0.5;
-
-fn ruby_text_font(text_font: &TextFont) -> TextFont {
+fn ruby_text_font(text_font: &TextFont, font_size_scale: f32) -> TextFont {
     TextFont {
-        font_size: text_font.font_size * RUBY_FONT_SIZE_SCALE,
+        font_size: text_font.font_size * font_size_scale,
         ..text_font.clone()
     }
 }
 
-fn update_furigana(
+fn update_ruby(
     text_layouts: Query<(&TextLayoutInfo, Ref<TextFont>), Without<RubyTextOf>>,
     mut node_query: Query<(&ComputedNode, &mut UiGlobalTransform, &mut UiTransform)>,
     ruby_query: Query<
@@ -163,7 +186,7 @@ fn update_furigana(
 
         let text_font = text_font.unwrap_or(node_text_font);
         if text_font.is_changed() {
-            *ruby_font = ruby_text_font(&text_font);
+            *ruby_font = ruby_text_font(&text_font, ruby.font_size_scale);
         }
 
         let parent_rect = if let Ok(&ChildOf(node_parent)) = ancestors.get(node_entity) {
