@@ -131,6 +131,12 @@ fn startup(mut commands: Commands, assets: Res<AssetServer>) {
                 },
             ));
 
+            let text_font = TextFont {
+                font: font.clone(),
+                line_height: LineHeight::RelativeToFont(1.4),
+                ..default()
+            };
+
             parent
                 .spawn((
                     Text(String::new()),
