@@ -11,10 +11,18 @@ impl Plugin for FuriganaPlugin {
     }
 }
 
-#[derive(Component, Clone)]
+#[derive(Component, Clone, Debug, Default)]
 #[require(RubyText(Entity::PLACEHOLDER))]
 pub struct Ruby {
     pub rt: String,
+    pub position: RubyPosition,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub enum RubyPosition {
+    #[default]
+    Above,
+    Below,
 }
 
 #[derive(Component, Clone, Copy)]
@@ -182,7 +190,10 @@ fn update_furigana(
 
         let section_pos_local = Vec2::new(
             (section_rect.min.x + section_rect.max.x) / 2.0,
-            section_rect.min.y,
+            match ruby.position {
+                RubyPosition::Above => section_rect.min.y,
+                RubyPosition::Below => section_rect.max.y,
+            },
         );
 
         let section_pos_global = text_ui_transform

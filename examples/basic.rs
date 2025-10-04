@@ -36,13 +36,17 @@ fn startup(mut commands: Commands, assets: Res<AssetServer>) {
     };
 
     let ruby_spans = |spawner: &mut RelatedSpawnerCommands<ChildOf>,
-                      arr: &[(&str, Option<&str>)]| {
+                      arr: &[(&str, Option<&str>)],
+                      position: RubyPosition| {
         for &(text, rt) in arr {
             if let Some(rt) = rt {
                 spawner.spawn((
                     TextSpan::new(text),
                     text_font.clone(),
-                    Ruby { rt: rt.into() },
+                    Ruby {
+                        rt: rt.into(),
+                        position,
+                    },
                 ));
             } else {
                 spawner.spawn(TextSpan::new(text));
@@ -69,7 +73,8 @@ fn startup(mut commands: Commands, assets: Res<AssetServer>) {
                     Text("年紀".into()),
                     text_font.clone(),
                     Ruby {
-                        rt: "とし".into()
+                        rt: "とし".into(),
+                        ..default()
                     },
                 ))
                 .with_children(|parent| {
@@ -113,6 +118,7 @@ fn startup(mut commands: Commands, assets: Res<AssetServer>) {
                             ("東照神君", Some("とうせうしんくん")),
                             ("の", None),
                         ],
+                        RubyPosition::Above,
                     );
                 });
 
@@ -121,6 +127,7 @@ fn startup(mut commands: Commands, assets: Res<AssetServer>) {
                 text_font.clone(),
                 Ruby {
                     rt: "consectetur adipiscing elit".into(),
+                    ..default()
                 },
             ));
 
@@ -135,15 +142,24 @@ fn startup(mut commands: Commands, assets: Res<AssetServer>) {
                     },
                 ))
                 .with_children(|parent| {
-                    ruby_spans(
-                        parent,
-                        &[
-                            ("とある", None),
-                            ("科学", Some("かがく")),
-                            ("の\n", None),
-                            ("超電磁砲", Some("レールガン")),
-                        ],
-                    );
+                    parent.spawn((TextSpan::new("とある"), text_font.clone()));
+                    parent.spawn((
+                        TextSpan::new("科学"),
+                        text_font.clone(),
+                        Ruby {
+                            rt: "かがく".into(),
+                            position: RubyPosition::Above,
+                        },
+                    ));
+                    parent.spawn((TextSpan::new("の\n"), text_font.clone()));
+                    parent.spawn((
+                        TextSpan::new("超電磁砲"),
+                        text_font.clone(),
+                        Ruby {
+                            rt: "レールガン".into(),
+                            position: RubyPosition::Below,
+                        },
+                    ));
                 });
         });
 
