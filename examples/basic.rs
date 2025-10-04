@@ -23,6 +23,7 @@ fn main() {
         )
         .add_plugins(FuriganaPlugin)
         .add_systems(Startup, startup)
+        .add_systems(Update, update_ui_rotator)
         .run();
 }
 
@@ -34,7 +35,8 @@ fn startup(mut commands: Commands, assets: Res<AssetServer>) {
         ..default()
     };
 
-    let ruby_spans = |spawner: &mut RelatedSpawnerCommands<ChildOf>, arr: &[(&str, Option<&str>)]| {
+    let ruby_spans = |spawner: &mut RelatedSpawnerCommands<ChildOf>,
+                      arr: &[(&str, Option<&str>)]| {
         for &(text, rt) in arr {
             if let Some(rt) = rt {
                 spawner.spawn((
@@ -99,7 +101,7 @@ fn startup(mut commands: Commands, assets: Res<AssetServer>) {
                 .spawn((
                     Text(String::new()),
                     text_font.clone(),
-                    UiTransform::from_rotation(Rot2::degrees(45.0)),
+                    UiRotator(0.0),
                     Node {
                         margin: UiRect::top(px(100.0)),
                         ..default()
@@ -119,4 +121,14 @@ fn startup(mut commands: Commands, assets: Res<AssetServer>) {
         });
 
     commands.spawn((Camera2d, Camera::default()));
+}
+
+#[derive(Component)]
+struct UiRotator(f32);
+
+fn update_ui_rotator(mut query: Query<(&mut UiTransform, &mut UiRotator)>, time: Res<Time>) {
+    for (mut ui_transform, mut rotator) in &mut query {
+        rotator.0 += time.delta_secs() * 15.0;
+        ui_transform.rotation = Rot2::degrees(rotator.0);
+    }
 }

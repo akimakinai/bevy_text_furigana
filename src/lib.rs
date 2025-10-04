@@ -252,3 +252,12 @@ fn global_rect(node: &ComputedNode, transform: &UiGlobalTransform) -> Rect {
         max: transform.transform_point2(Vec2::splat(0.5) * rect_size),
     }
 }
+
+// fn rotated_rect_size(size: Vec2, angle: f32) -> Vec2 {
+//     // https://stackoverflow.com/questions/6657479/aabb-of-rotated-sprite
+//     let (sin, cos) = angle.sin_cos();
+//     Vec2::new(
+//         size.x * cos.abs() + size.y * sin.abs(),
+//         size.x * sin.abs() + size.y * cos.abs(),
+//     )
+// }
