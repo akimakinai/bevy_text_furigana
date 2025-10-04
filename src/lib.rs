@@ -1,9 +1,4 @@
-use bevy::{
-    math::Affine2,
-    prelude::*,
-    text::{LineHeight, TextLayoutInfo},
-    ui::UiSystems,
-};
+use bevy::{math::Affine2, prelude::*, text::TextLayoutInfo, ui::UiSystems};
 
 pub struct FuriganaPlugin;
 
@@ -108,7 +103,7 @@ fn ruby_text_font(text_font: &TextFont) -> TextFont {
 fn update_furigana(
     text_layouts: Query<(&TextLayoutInfo, Ref<TextFont>), Without<RubyTextOf>>,
     mut node_query: Query<(&ComputedNode, &mut UiGlobalTransform, &mut UiTransform)>,
-    query: Query<
+    ruby_query: Query<
         (
             Entity,
             Ref<Ruby>,
@@ -132,16 +127,16 @@ fn update_furigana(
     >,
     ancestors: Query<&ChildOf>,
 ) -> Result<()> {
-    for (entity, ruby, &RubyText(rt_id), text_font, child_of, is_text_span) in &query {
+    for (entity, ruby, &RubyText(rt_id), text_font, child_of, is_text_span) in &ruby_query {
         let node_entity = if is_text_span {
-            if let Some(&ChildOf(parent)) = child_of {
-                parent
-            } else {
+            let Some(&ChildOf(parent)) = child_of else {
                 continue;
-            }
+            };
+            parent
         } else {
             entity
         };
+
         let Ok((layout_info, node_text_font)) = text_layouts.get(node_entity) else {
             error!("No TextLayoutInfo for entity {:?}", node_entity);
             continue;
@@ -150,7 +145,7 @@ fn update_furigana(
         let Ok((_, ruby_computed_node, mut text, mut node, mut ruby_font, mut visibility)) =
             ruby_nodes.get_mut(rt_id)
         else {
-            error!("No Text for entity {:?}", rt_id);
+            error!("No ruby text node for entity {:?}", rt_id);
             continue;
         };
 
@@ -159,14 +154,9 @@ fn update_furigana(
         }
 
         let text_font = text_font.unwrap_or(node_text_font);
-
         if text_font.is_changed() {
             *ruby_font = ruby_text_font(&text_font);
         }
-
-        let text_node_rect = node_query
-            .get(node_entity)
-            .map(|(computed_node, ui_transform, _)| global_rect(computed_node, ui_transform))?;
 
         let parent_rect = if let Ok(&ChildOf(node_parent)) = ancestors.get(node_entity) {
             let (computed_node, ui_transform, _) = node_query.get(node_parent)?;
@@ -185,30 +175,21 @@ fn update_furigana(
             .map(|&(_, rect)| rect)
             .unwrap_or(Rect::new(0.0, 0.0, 0.0, 0.0));
 
-        let line_height_corr = |rect_height| match text_font.line_height {
-            LineHeight::RelativeToFont(factor) => rect_height / factor,
-            LineHeight::Px(px) => rect_height - px,
-        };
-
-        let Ok((_, &text_ui_transform, _)) = node_query.get(node_entity) else {
+        let Ok((computed_node, &text_ui_transform, _)) = node_query.get(node_entity) else {
             continue;
         };
-
         let (text_scale, text_angle, _) = text_ui_transform.to_scale_angle_translation();
 
-        let section_pos = Vec2::new(
+        let section_pos_local = Vec2::new(
             (section_rect.min.x + section_rect.max.x) / 2.0,
-            section_rect.min.y
-                - (line_height_corr(section_rect.max.y - section_rect.min.y)
-                    * RUBY_FONT_SIZE_SCALE),
-        )
-        .rotate(Vec2::from_angle(text_angle));
+            section_rect.min.y,
+        );
 
-        let new_ui_x = text_node_rect.min.x - (ruby_computed_node.size().x / 2.0) + section_pos.x;
-        let new_ui_y = text_node_rect.min.y + section_pos.y;
+        let section_pos_global = text_ui_transform
+            .transform_point2(section_pos_local - computed_node.content_size() / 2.0);
 
         let Ok((_, mut rt_global_transform, mut rt_transform)) = node_query.get_mut(rt_id) else {
-            error!("No UiGlobalTransform for entity {:?}", rt_id);
+            error!("No UiGlobalTransform for ruby text entity {:?}", rt_id);
             continue;
         };
 
@@ -217,15 +198,12 @@ fn update_furigana(
 
         // Update GlobalUiTransform to erase one-frame delay
         rt_global_transform.set_if_neq(UiGlobalTransform::from(
-            Affine2::from_scale_angle_translation(
-                text_scale,
-                text_angle,
-                Vec2::new(new_ui_x, new_ui_y) + ruby_computed_node.size() / 2.0,
-            ),
+            Affine2::from_scale_angle_translation(text_scale, text_angle, section_pos_global),
         ));
 
-        let new_top = Val::Px(new_ui_y - parent_rect.min.y);
-        let new_left = Val::Px(new_ui_x - parent_rect.min.x);
+        let ruby_top_left_global = section_pos_global - ruby_computed_node.size() / 2.0;
+        let new_top = Val::Px(ruby_top_left_global.y - parent_rect.min.y);
+        let new_left = Val::Px(ruby_top_left_global.x - parent_rect.min.x);
         if node.top != new_top {
             node.top = new_top;
         }
