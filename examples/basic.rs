@@ -118,7 +118,7 @@ fn startup(mut commands: Commands, assets: Res<AssetServer>) {
                             ("東照神君", Some("とうせうしんくん")),
                             ("の", None),
                         ],
-                        RubyPosition::Above,
+                        RubyPosition::Over,
                     );
                 });
 
@@ -148,7 +148,7 @@ fn startup(mut commands: Commands, assets: Res<AssetServer>) {
                         text_font.clone(),
                         Ruby {
                             rt: "かがく".into(),
-                            position: RubyPosition::Above,
+                            position: RubyPosition::Over,
                         },
                     ));
                     parent.spawn((TextSpan::new("の\n"), text_font.clone()));
@@ -157,7 +157,7 @@ fn startup(mut commands: Commands, assets: Res<AssetServer>) {
                         text_font.clone(),
                         Ruby {
                             rt: "レールガン".into(),
-                            position: RubyPosition::Below,
+                            position: RubyPosition::Under,
                         },
                     ));
                 });

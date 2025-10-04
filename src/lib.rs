@@ -21,8 +21,8 @@ pub struct Ruby {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub enum RubyPosition {
     #[default]
-    Above,
-    Below,
+    Over,
+    Under,
 }
 
 #[derive(Component, Clone, Copy)]
@@ -191,8 +191,8 @@ fn update_furigana(
         let section_pos_local = Vec2::new(
             (section_rect.min.x + section_rect.max.x) / 2.0,
             match ruby.position {
-                RubyPosition::Above => section_rect.min.y,
-                RubyPosition::Below => section_rect.max.y,
+                RubyPosition::Over => section_rect.min.y,
+                RubyPosition::Under => section_rect.max.y,
             },
         );
 
