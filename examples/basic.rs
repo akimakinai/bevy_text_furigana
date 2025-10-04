@@ -58,6 +58,7 @@ fn startup(mut commands: Commands, assets: Res<AssetServer>) {
                 justify_content: JustifyContent::Center,
                 align_items: AlignItems::Center,
                 flex_direction: FlexDirection::Column,
+                padding: UiRect::all(px(10.0)),
                 ..default()
             },
             Name::new("Root"),
@@ -75,6 +76,7 @@ fn startup(mut commands: Commands, assets: Res<AssetServer>) {
                     ruby_spans(
                         parent,
                         &[
+                            // Sampled from 高野聖
                             ("は若し、お", None),
                             ("前様", Some("まえさん")),
                             ("、", None),
@@ -92,10 +94,35 @@ fn startup(mut commands: Commands, assets: Res<AssetServer>) {
                             ("功徳", Some("くどく")),
                             ("のためにする家があると", None),
                             ("承", Some("うけたまわ")),
-                            ("りましても、", None),
+                            ("りましても、\n", None),
+                            // Sampled from 大岡政談
+                            ("下野國", Some("しもつけのくに")),
+                            ("日光山", Some("につくわうざん")),
+                            ("に", None),
+                            ("鎭座", Some("ちんざ")),
+                            ("まします", None),
+                            ("東照大神", Some("とうせうだいじん")),
+                            ("より第八代の", None),
+                            ("將軍", Some("しやうぐん")),
+                            ("有徳院吉宗公", Some("いうとくゐんよしむねこう")),
+                            ("と", None),
+                            ("稱", Some("しよう")),
+                            ("し", None),
+                            ("奉", Some("たてま")),
+                            ("つるは", None),
+                            ("東照神君", Some("とうせうしんくん")),
+                            ("の", None),
                         ],
                     );
                 });
+
+            parent.spawn((
+                Text("Lorem ipsum dolor sit amet".into()),
+                text_font.clone(),
+                Ruby {
+                    rt: "consectetur adipiscing elit".into(),
+                },
+            ));
 
             parent
                 .spawn((
