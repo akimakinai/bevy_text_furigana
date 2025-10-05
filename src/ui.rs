@@ -146,12 +146,14 @@ pub(crate) fn update_ruby(
             error!("No TextLayoutInfo for entity {:?}", node_entity);
             continue;
         };
-        let section_rect = layout_info
+        let Some(section_rect) = layout_info
             .section_rects
             .iter()
             .find(|&&(id, _)| id == text_entity)
             .map(|&(_, rect)| rect)
-            .unwrap_or(Rect::new(0.0, 0.0, 0.0, 0.0));
+        else {
+            continue;
+        };
 
         let (scale_factor, parent_global, parent_computed) = if let Ok(&ChildOf(node_parent)) =
             ancestors.get(node_entity)
@@ -175,7 +177,7 @@ pub(crate) fn update_ruby(
 
         let (text_scale, text_angle, _) = node_global_transform.to_scale_angle_translation();
 
-        let ruby_pos_local = Vec2::new(
+        let ruby_pos_local_topleft = Vec2::new(
             (section_rect.min.x + section_rect.max.x) / 2.0,
             match ruby.position {
                 RubyPosition::Over => section_rect.min.y,
@@ -183,8 +185,9 @@ pub(crate) fn update_ruby(
             },
         );
 
-        let ruby_pos_global = node_global_transform
-            .transform_point2(ruby_pos_local - node_computed.content_size() / 2.0);
+        let ruby_pos_local = ruby_pos_local_topleft - node_computed.size() / 2.0;
+
+        let ruby_pos_global = node_global_transform.transform_point2(ruby_pos_local);
 
         let Ok((ruby_computed_node, mut rt_global_transform, mut rt_transform, _)) =
             node_query.get_mut(rt_id)
