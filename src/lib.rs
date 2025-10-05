@@ -215,6 +215,8 @@ fn update_ruby(
         {
             (node_global_transform.translation - node_computed.size() / 2.0)
                 - (parent_global.translation - parent_computed.size() / 2.0)
+                // I don't know why but need to subtract border
+                - Vec2::new(parent_computed.border().left, parent_computed.border().top)
         } else {
             Vec2::ZERO
         };
@@ -248,7 +250,8 @@ fn update_ruby(
             ));
         }
 
-        let ruby_top_left = ruby_pos_local + offset - ruby_computed_node.size() / 2.0;
+        let ruby_top_left =
+            ruby_pos_local + offset - ruby_computed_node.size() / 2.0;
         let new_top = Val::Px(ruby_top_left.y);
         let new_left = Val::Px(ruby_top_left.x);
         if node.top != new_top {
