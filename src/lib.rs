@@ -300,25 +300,24 @@ fn update_ruby(
             .map(|&(_, rect)| rect)
             .unwrap_or(Rect::new(0.0, 0.0, 0.0, 0.0));
 
-        let Ok((node_computed, node_global_transform, &node_transform, _)) =
+        let Ok((&node_computed, &node_global_transform, &node_transform, _)) =
             node_query.get(node_entity)
         else {
             continue;
         };
 
-        let (offset, scale_factor);
-        if let Ok(&ChildOf(node_parent)) = ancestors.get(node_entity)
+        let (scale_factor, parent_global, parent_computed) = if let Ok(&ChildOf(node_parent)) =
+            ancestors.get(node_entity)
             && let Ok((parent_computed, parent_global, .., parent_render_target)) =
                 node_query.get(node_parent)
         {
-            offset = (node_global_transform.translation - node_computed.size() / 2.0)
-                - (parent_global.translation - parent_computed.size() / 2.0)
-                // I don't know why but need to subtract border
-                - Vec2::new(parent_computed.border().left, parent_computed.border().top);
-            scale_factor = parent_render_target.scale_factor();
+            (
+                parent_render_target.scale_factor(),
+                *parent_global,
+                *parent_computed,
+            )
         } else {
-            offset = Vec2::ZERO;
-            scale_factor = 1.0;
+            (1.0, UiGlobalTransform::default(), ComputedNode::default())
         };
 
         let (text_scale, text_angle, _) = node_global_transform.to_scale_angle_translation();
@@ -355,7 +354,10 @@ fn update_ruby(
             continue;
         };
 
-        let ruby_top_left = ruby_pos_local + offset - ruby_computed_node.size() / 2.0;
+        let ruby_top_left = parent_global.inverse().transform_point2(ruby_pos_global)
+            + parent_computed.size() / 2.0
+            - Vec2::new(parent_computed.border().left, parent_computed.border().top)
+            - ruby_computed_node.size() / 2.0;
         let new_top = Val::Px(ruby_top_left.y / scale_factor);
         let new_left = Val::Px(ruby_top_left.x / scale_factor);
         if node.top != new_top {
