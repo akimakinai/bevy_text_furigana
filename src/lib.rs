@@ -163,7 +163,12 @@ fn update_ruby_text(
 
 fn update_ruby(
     text_layouts: Query<&TextLayoutInfo>,
-    mut node_query: Query<(&ComputedNode, &mut UiGlobalTransform, &mut UiTransform)>,
+    mut node_query: Query<(
+        &ComputedNode,
+        &mut UiGlobalTransform,
+        &mut UiTransform,
+        &ComputedUiRenderTargetInfo,
+    )>,
     ruby_query: Query<
         (
             Entity,
@@ -204,21 +209,25 @@ fn update_ruby(
             .map(|&(_, rect)| rect)
             .unwrap_or(Rect::new(0.0, 0.0, 0.0, 0.0));
 
-        let Ok((node_computed, node_global_transform, &node_transform)) =
+        let Ok((node_computed, node_global_transform, &node_transform, _)) =
             node_query.get(node_entity)
         else {
             continue;
         };
 
-        let offset = if let Ok(&ChildOf(node_parent)) = ancestors.get(node_entity)
-            && let Ok((parent_computed, parent_global, ..)) = node_query.get(node_parent)
+        let (offset, scale_factor);
+        if let Ok(&ChildOf(node_parent)) = ancestors.get(node_entity)
+            && let Ok((parent_computed, parent_global, .., parent_render_target)) =
+                node_query.get(node_parent)
         {
-            (node_global_transform.translation - node_computed.size() / 2.0)
+            offset = (node_global_transform.translation - node_computed.size() / 2.0)
                 - (parent_global.translation - parent_computed.size() / 2.0)
                 // I don't know why but need to subtract border
-                - Vec2::new(parent_computed.border().left, parent_computed.border().top)
+                - Vec2::new(parent_computed.border().left, parent_computed.border().top);
+            scale_factor = parent_render_target.scale_factor();
         } else {
-            Vec2::ZERO
+            offset = Vec2::ZERO;
+            scale_factor = 1.0;
         };
 
         let (text_scale, text_angle, _) = node_global_transform.to_scale_angle_translation();
@@ -234,7 +243,7 @@ fn update_ruby(
         let ruby_pos_global = node_global_transform
             .transform_point2(ruby_pos_local - node_computed.content_size() / 2.0);
 
-        let Ok((ruby_computed_node, mut rt_global_transform, mut rt_transform)) =
+        let Ok((ruby_computed_node, mut rt_global_transform, mut rt_transform, _)) =
             node_query.get_mut(rt_id)
         else {
             error!("No UiGlobalTransform for ruby text entity {:?}", rt_id);
@@ -250,10 +259,9 @@ fn update_ruby(
             ));
         }
 
-        let ruby_top_left =
-            ruby_pos_local + offset - ruby_computed_node.size() / 2.0;
-        let new_top = Val::Px(ruby_top_left.y);
-        let new_left = Val::Px(ruby_top_left.x);
+        let ruby_top_left = ruby_pos_local + offset - ruby_computed_node.size() / 2.0;
+        let new_top = Val::Px(ruby_top_left.y / scale_factor);
+        let new_left = Val::Px(ruby_top_left.x / scale_factor);
         if node.top != new_top {
             node.top = new_top;
         }
