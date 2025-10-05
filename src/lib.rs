@@ -4,10 +4,25 @@ pub struct FuriganaPlugin;
 
 impl Plugin for FuriganaPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(PostUpdate, update_ruby.after(UiSystems::Layout))
+        app.init_resource::<FuriganaSettings>()
+            .add_systems(PostUpdate, update_ruby.after(UiSystems::Layout))
             .add_systems(PostUpdate, update_ruby_text.before(UiSystems::Layout))
             .add_observer(add_ruby)
             .add_observer(add_ruby_text_span);
+    }
+}
+
+#[derive(Resource)]
+pub struct FuriganaSettings {
+    /// Update `GlobalUiTransform` to eliminate one-frame delay.
+    pub update_ui_global_transform: bool,
+}
+
+impl Default for FuriganaSettings {
+    fn default() -> Self {
+        Self {
+            update_ui_global_transform: true,
+        }
     }
 }
 
@@ -159,7 +174,9 @@ fn update_ruby(
         ),
         Without<RubyText>,
     >,
+    ancestors: Query<&ChildOf>,
     mut ruby_nodes: Query<(&mut Node, &mut Visibility), (With<RubyText>, Without<Ruby>)>,
+    settings: Res<FuriganaSettings>,
 ) -> Result<()> {
     for (text_entity, ruby, &LinkedRubyText(rt_id), child_of, is_text_span) in &ruby_query {
         let node_entity = if is_text_span {
@@ -187,10 +204,19 @@ fn update_ruby(
             .map(|&(_, rect)| rect)
             .unwrap_or(Rect::new(0.0, 0.0, 0.0, 0.0));
 
-        let Ok((computed_node, node_global_transform, &node_transform)) =
+        let Ok((node_computed, node_global_transform, &node_transform)) =
             node_query.get(node_entity)
         else {
             continue;
+        };
+
+        let offset = if let Ok(&ChildOf(node_parent)) = ancestors.get(node_entity)
+            && let Ok((parent_computed, parent_global, ..)) = node_query.get(node_parent)
+        {
+            (node_global_transform.translation - node_computed.size() / 2.0)
+                - (parent_global.translation - parent_computed.size() / 2.0)
+        } else {
+            Vec2::ZERO
         };
 
         let (text_scale, text_angle, _) = node_global_transform.to_scale_angle_translation();
@@ -204,9 +230,11 @@ fn update_ruby(
         );
 
         let ruby_pos_global = node_global_transform
-            .transform_point2(ruby_pos_local - computed_node.content_size() / 2.0);
+            .transform_point2(ruby_pos_local - node_computed.content_size() / 2.0);
 
-        let Ok((_, mut rt_global_transform, mut rt_transform)) = node_query.get_mut(rt_id) else {
+        let Ok((ruby_computed_node, mut rt_global_transform, mut rt_transform)) =
+            node_query.get_mut(rt_id)
+        else {
             error!("No UiGlobalTransform for ruby text entity {:?}", rt_id);
             continue;
         };
@@ -214,12 +242,13 @@ fn update_ruby(
         rt_transform.scale = node_transform.scale;
         rt_transform.rotation = node_transform.rotation;
 
-        // Update GlobalUiTransform to erase one-frame delay
-        rt_global_transform.set_if_neq(UiGlobalTransform::from(
-            Affine2::from_scale_angle_translation(text_scale, text_angle, ruby_pos_global),
-        ));
+        if settings.update_ui_global_transform {
+            rt_global_transform.set_if_neq(UiGlobalTransform::from(
+                Affine2::from_scale_angle_translation(text_scale, text_angle, ruby_pos_global),
+            ));
+        }
 
-        let ruby_top_left = ruby_pos_local;
+        let ruby_top_left = ruby_pos_local + offset - ruby_computed_node.size() / 2.0;
         let new_top = Val::Px(ruby_top_left.y);
         let new_left = Val::Px(ruby_top_left.x);
         if node.top != new_top {
@@ -234,26 +263,3 @@ fn update_ruby(
 
     Ok(())
 }
-
-// fn global_rect(node: &ComputedNode, transform: &UiGlobalTransform) -> Rect {
-//     // from bevy_ui_render/src/ui_material_pipeline.rs
-//     let uinode_rect = Rect {
-//         min: Vec2::ZERO,
-//         max: node.size(),
-//     };
-//     let rect_size = uinode_rect.size();
-
-//     Rect {
-//         min: transform.transform_point2(Vec2::splat(-0.5) * rect_size),
-//         max: transform.transform_point2(Vec2::splat(0.5) * rect_size),
-//     }
-// }
-
-// fn rotated_rect_size(size: Vec2, angle: f32) -> Vec2 {
-//     // https://stackoverflow.com/questions/6657479/aabb-of-rotated-sprite
-//     let (sin, cos) = angle.sin_cos();
-//     Vec2::new(
-//         size.x * cos.abs() + size.y * sin.abs(),
-//         size.x * sin.abs() + size.y * cos.abs(),
-//     )
-// }

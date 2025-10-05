@@ -1,6 +1,7 @@
 use bevy::{
     asset::UnapprovedPathMode,
     ecs::relationship::RelatedSpawnerCommands,
+    input::keyboard::Key,
     log::{DEFAULT_FILTER, LogPlugin},
     prelude::*,
     text::LineHeight,
@@ -23,7 +24,7 @@ fn main() {
         )
         .add_plugins(FuriganaPlugin)
         .add_systems(Startup, startup)
-        .add_systems(Update, update_ui_rotator)
+        .add_systems(Update, (update_ui_rotator, settings))
         .run();
 }
 
@@ -185,5 +186,15 @@ fn update_ui_rotator(mut query: Query<(&mut UiTransform, &mut UiRotator)>, time:
     for (mut ui_transform, mut rotator) in &mut query {
         rotator.0 += time.delta_secs() * 15.0;
         ui_transform.rotation = Rot2::degrees(rotator.0);
+    }
+}
+
+fn settings(key: Res<ButtonInput<Key>>, mut configs: ResMut<FuriganaSettings>) {
+    if key.just_pressed(Key::Character("u".into())) {
+        configs.update_ui_global_transform = !configs.update_ui_global_transform;
+        info!(
+            "update_ui_global_transform: {}",
+            configs.update_ui_global_transform
+        );
     }
 }
