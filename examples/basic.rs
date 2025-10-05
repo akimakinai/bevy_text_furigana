@@ -125,12 +125,26 @@ fn startup(mut commands: Commands, assets: Res<AssetServer>) {
                 });
 
             parent.spawn((
-                Text("Lorem ipsum dolor sit amet".into()),
+                Text::new("Lorem ipsum dolor sit amet\n"),
                 text_font.clone(),
                 Ruby {
                     rt: "consectetur adipiscing elit".into(),
                     ..default()
                 },
+            ));
+
+            parent.spawn((
+                Text::default(),
+                text_font.clone(),
+                children![(
+                    TextSpan::new("超電磁砲"),
+                    text_font.clone(),
+                    Ruby {
+                        rt: "レールガン".into(),
+                        position: RubyPosition::Under,
+                        font_size_scale: 0.8,
+                    },
+                )],
             ));
 
             parent
@@ -152,26 +166,16 @@ fn startup(mut commands: Commands, assets: Res<AssetServer>) {
                             text_font.clone(),
                         ))
                         .with_children(|parent| {
-                            parent.spawn((TextSpan::new("とある"), text_font.clone()));
-                            parent.spawn((
-                                TextSpan::new("科学"),
-                                text_font.clone(),
-                                Ruby {
-                                    rt: "かがく".into(),
-                                    position: RubyPosition::Over,
-                                    font_size_scale: 0.5,
-                                },
-                            ));
-                            parent.spawn((TextSpan::new("の\n"), text_font.clone()));
-                            parent.spawn((
-                                TextSpan::new("超電磁砲"),
-                                text_font.clone(),
-                                Ruby {
-                                    rt: "レールガン".into(),
-                                    position: RubyPosition::Under,
-                                    font_size_scale: 0.8,
-                                },
-                            ));
+                            // Sampled from 探検実記
+                            ruby_spans(
+                                parent,
+                                &[
+                                    ("幻花翁、\n", Some("げんくわおう")),
+                                    ("望蜀生、\n", Some("ぼうしよくせい")),
+                                    ("玄川子", Some("げんせんし")),
+                                ],
+                                RubyPosition::Over,
+                            );
                         });
                 });
         });
@@ -184,7 +188,7 @@ struct UiRotator(f32);
 
 fn update_ui_rotator(mut query: Query<(&mut UiTransform, &mut UiRotator)>, time: Res<Time>) {
     for (mut ui_transform, mut rotator) in &mut query {
-        rotator.0 += time.delta_secs() * 15.0;
+        rotator.0 += time.delta_secs() * 30.0;
         ui_transform.rotation = Rot2::degrees(rotator.0);
     }
 }
