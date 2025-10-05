@@ -4,5 +4,15 @@ version = "0.1.0"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 
+[features]
+text2d = ["bevy/bevy_sprite"]
+
 [dependencies]
-bevy = { version = "0.17" }
+bevy = { version = "0.17", default-features = false, features = [
+    "std",
+    "bevy_text",
+    "bevy_ui",
+]}
+
+[dev-dependencies]
+bevy = "0.17"

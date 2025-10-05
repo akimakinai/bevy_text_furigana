@@ -1,9 +1,6 @@
-use bevy::{
-    math::Affine2,
-    prelude::*,
-    text::{Text2dUpdateSystems, TextLayoutInfo},
-    ui::UiSystems,
-};
+#[cfg(feature = "text2d")]
+use bevy::text::Text2dUpdateSystems;
+use bevy::{math::Affine2, prelude::*, text::TextLayoutInfo, ui::UiSystems};
 
 pub struct FuriganaPlugin;
 
@@ -12,10 +9,12 @@ impl Plugin for FuriganaPlugin {
         app.init_resource::<FuriganaSettings>()
             .add_systems(PostUpdate, update_ruby.after(UiSystems::Layout))
             .add_systems(PostUpdate, update_ruby_text.before(UiSystems::Layout))
-            .add_systems(PostUpdate, update_ruby_2d.before(Text2dUpdateSystems))
-            .add_systems(PostUpdate, update_ruby_text_2d.after(Text2dUpdateSystems))
             .add_observer(add_ruby)
-            .add_observer(add_ruby_text_span)
+            .add_observer(add_ruby_text_span);
+
+        #[cfg(feature = "text2d")]
+        app.add_systems(PostUpdate, update_ruby_2d.before(Text2dUpdateSystems))
+            .add_systems(PostUpdate, update_ruby_text_2d.after(Text2dUpdateSystems))
             .add_observer(add_ruby_2d)
             .add_observer(add_ruby_text_span_2d);
     }
@@ -74,6 +73,7 @@ pub struct RubyText(
     pub Entity,
 );
 
+#[cfg(feature = "text2d")]
 /// Component for 2D ruby text entity.
 #[derive(Component, Clone, Copy)]
 #[relationship(relationship_target = LinkedRubyText2d)]
@@ -93,11 +93,13 @@ impl LinkedRubyText {
     }
 }
 
+#[cfg(feature = "text2d")]
 /// Tracks ruby text entity corresponding to [`Ruby`] for 2D text.
 #[derive(Component, Clone, Copy)]
 #[relationship_target(relationship = RubyText2d, linked_spawn)]
 pub struct LinkedRubyText2d(Entity);
 
+#[cfg(feature = "text2d")]
 impl LinkedRubyText2d {
     pub fn entity(&self) -> Entity {
         self.0
@@ -145,6 +147,7 @@ fn add_ruby_text_span(
     }
 }
 
+#[cfg(feature = "text2d")]
 fn add_ruby_2d(
     on: On<Add, Ruby>,
     ruby: Query<(&Ruby, &TextFont), With<Text2d>>,
@@ -155,6 +158,7 @@ fn add_ruby_2d(
     }
 }
 
+#[cfg(feature = "text2d")]
 fn add_ruby_text_span_2d(
     on: On<Add, Ruby>,
     ruby: Query<&Ruby, With<TextSpan>>,
@@ -202,6 +206,7 @@ fn create_ruby_text(
     commands.entity(parent).add_child(rt_id);
 }
 
+#[cfg(feature = "text2d")]
 fn create_ruby_text_2d(
     on: On<Add, Ruby>,
     mut commands: Commands,
@@ -240,6 +245,7 @@ fn update_ruby_text(
     }
 }
 
+#[cfg(feature = "text2d")]
 fn update_ruby_text_2d(
     mut ruby_text: Query<(&RubyText2d, &mut Text2d, &mut TextFont), Without<Ruby>>,
     ruby: Query<(Ref<Ruby>, Ref<TextFont>)>,
@@ -300,12 +306,6 @@ fn update_ruby(
             .map(|&(_, rect)| rect)
             .unwrap_or(Rect::new(0.0, 0.0, 0.0, 0.0));
 
-        let Ok((&node_computed, &node_global_transform, &node_transform, _)) =
-            node_query.get(node_entity)
-        else {
-            continue;
-        };
-
         let (scale_factor, parent_global, parent_computed) = if let Ok(&ChildOf(node_parent)) =
             ancestors.get(node_entity)
             && let Ok((parent_computed, parent_global, .., parent_render_target)) =
@@ -318,6 +318,12 @@ fn update_ruby(
             )
         } else {
             (1.0, UiGlobalTransform::default(), ComputedNode::default())
+        };
+
+        let Ok((node_computed, node_global_transform, &node_transform, _)) =
+            node_query.get(node_entity)
+        else {
+            continue;
         };
 
         let (text_scale, text_angle, _) = node_global_transform.to_scale_angle_translation();
@@ -371,6 +377,7 @@ fn update_ruby(
     Ok(())
 }
 
+#[cfg(feature = "text2d")]
 fn update_ruby_2d(
     text_layouts: Query<&TextLayoutInfo>,
     ruby_query: Query<
