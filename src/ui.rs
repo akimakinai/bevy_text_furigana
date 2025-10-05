@@ -24,10 +24,11 @@ impl LinkedRubyText {
 
 pub(crate) fn add_ruby(
     on: On<Add, Ruby>,
-    ruby_ui: Query<(&Ruby, &TextFont, &ChildOf), With<Text>>,
+    ruby_ui: Query<(&Ruby, &TextFont, Option<&ChildOf>), With<Text>>,
     commands: Commands,
 ) {
-    if let Ok((ruby, text_font, &ChildOf(parent))) = ruby_ui.get(on.entity) {
+    if let Ok((ruby, text_font, child_of)) = ruby_ui.get(on.entity) {
+        let parent = child_of.map(ChildOf::parent);
         create_ruby_text(on, commands, parent, ruby, text_font, ruby.font_size_scale);
     }
 }
@@ -48,9 +49,7 @@ pub(crate) fn add_ruby_text_span(
             return;
         };
 
-        let Ok(&ChildOf(grandparent)) = ancestors.get(parent) else {
-            return;
-        };
+        let grandparent = ancestors.get(parent).ok().map(ChildOf::parent);
 
         create_ruby_text(
             on,
@@ -66,7 +65,7 @@ pub(crate) fn add_ruby_text_span(
 fn create_ruby_text(
     on: On<Add, Ruby>,
     mut commands: Commands,
-    parent: Entity,
+    parent: Option<Entity>,
     ruby: &Ruby,
     text_font: &TextFont,
     font_size_scale: f32,
@@ -82,7 +81,9 @@ fn create_ruby_text(
             ruby_text_font(text_font, font_size_scale),
         ))
         .id();
-    commands.entity(parent).add_child(rt_id);
+    if let Some(parent) = parent {
+        commands.entity(parent).add_child(rt_id);
+    }
 }
 
 fn ruby_text_font(text_font: &TextFont, font_size_scale: f32) -> TextFont {

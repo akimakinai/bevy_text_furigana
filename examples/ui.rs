@@ -200,6 +200,30 @@ fn startup(mut commands: Commands, assets: Res<AssetServer>) {
                 });
         });
 
+    commands
+        .spawn((
+            Text::new("ルート"),
+            Ruby {
+                rt: "Root".into(),
+                ..default()
+            },
+            Node {
+                position_type: PositionType::Absolute,
+                top: Val::Px(150.0),
+                right: Val::Px(5.0),
+                ..default()
+            },
+            text_font.clone(),
+            UiTransform::from_rotation(Rot2::degrees(90.0)),
+        ))
+        .with_children(|parent| {
+            ruby_spans(
+                parent,
+                &[("テキスト", Some("Text")), ("ノード", Some("Node"))],
+                RubyPosition::Over,
+            );
+        });
+
     commands.spawn((Camera2d, Camera::default()));
 }
 
