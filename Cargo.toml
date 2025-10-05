@@ -12,6 +12,7 @@ bevy = { version = "0.17", default-features = false, features = [
     "std",
     "bevy_text",
     "bevy_ui",
+    "bevy_log",
 ]}
 
 [dev-dependencies]
