@@ -111,7 +111,6 @@ fn add_ruby(
 ) {
     if let Ok((ruby, text_font, &ChildOf(parent))) = ruby_ui.get(on.entity) {
         create_ruby_text(on, commands, parent, ruby, text_font, ruby.font_size_scale);
-        return;
     }
 }
 
@@ -198,8 +197,6 @@ fn create_ruby_text(
                 ..default()
             },
             ruby_text_font(text_font, font_size_scale),
-            // Initially hidden to avoid flicker before positioned
-            Visibility::Hidden,
         ))
         .id();
     commands.entity(parent).add_child(rt_id);
@@ -279,7 +276,7 @@ fn update_ruby(
         Without<RubyText>,
     >,
     ancestors: Query<&ChildOf>,
-    mut ruby_nodes: Query<(&mut Node, &mut Visibility), (With<RubyText>, Without<Ruby>)>,
+    mut ruby_nodes: Query<&mut Node, (With<RubyText>, Without<Ruby>)>,
     settings: Res<FuriganaSettings>,
 ) -> Result<()> {
     for (text_entity, ruby, &LinkedRubyText(rt_id), child_of, is_text_span) in &ruby_query {
@@ -290,11 +287,6 @@ fn update_ruby(
             parent
         } else {
             text_entity
-        };
-
-        let Ok((mut node, mut visibility)) = ruby_nodes.get_mut(rt_id) else {
-            error!("No ruby text node for entity {:?}", rt_id);
-            continue;
         };
 
         let Ok(layout_info) = text_layouts.get(node_entity) else {
@@ -358,6 +350,11 @@ fn update_ruby(
             ));
         }
 
+        let Ok(mut node) = ruby_nodes.get_mut(rt_id) else {
+            error!("No ruby text node for entity {:?}", rt_id);
+            continue;
+        };
+
         let ruby_top_left = ruby_pos_local + offset - ruby_computed_node.size() / 2.0;
         let new_top = Val::Px(ruby_top_left.y / scale_factor);
         let new_left = Val::Px(ruby_top_left.x / scale_factor);
@@ -367,8 +364,6 @@ fn update_ruby(
         if node.left != new_left {
             node.left = new_left;
         }
-
-        visibility.set_if_neq(Visibility::Inherited);
     }
 
     Ok(())

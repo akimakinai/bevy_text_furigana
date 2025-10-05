@@ -153,6 +153,7 @@ fn startup(mut commands: Commands, assets: Res<AssetServer>) {
                         border: UiRect::all(Val::Px(10.0)),
                         margin: UiRect::top(px(100.0)),
                         padding: UiRect::all(px(10.0)),
+                        flex_direction: FlexDirection::Row,
                         ..default()
                     },
                     UiRotator(0.0),
@@ -161,7 +162,7 @@ fn startup(mut commands: Commands, assets: Res<AssetServer>) {
                 .with_children(|parent| {
                     parent
                         .spawn((
-                            Text(String::new()),
+                            Text::default(),
                             TextLayout::new_with_justify(Justify::Center),
                             text_font.clone(),
                         ))
@@ -177,6 +178,25 @@ fn startup(mut commands: Commands, assets: Res<AssetServer>) {
                                 RubyPosition::Over,
                             );
                         });
+
+                    // FIXME: these are broken
+                    parent
+                        .spawn((
+                            Text::new("品川\n"),
+                            text_font.clone(),
+                            Ruby {
+                                rt: "しながは".into(),
+                                ..default()
+                            },
+                        ))
+                        .with_child((
+                            TextSpan::new("下末吉村"),
+                            text_font.clone(),
+                            Ruby {
+                                rt: "しもすゑよしむら".into(),
+                                ..default()
+                            },
+                        ));
                 });
         });
 
