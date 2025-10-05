@@ -116,11 +116,12 @@ fn startup(mut commands: Commands, assets: Res<AssetServer>) {
     // Text2d with ruby under
     commands.spawn((
         Text2d("超電磁砲".into()),
+        TextBackgroundColor(bevy::color::palettes::css::ORANGE.into()),
         text_font.clone(),
         Ruby {
             rt: "レールガン".into(),
             position: RubyPosition::Under,
-            font_size_scale: 0.8,
+            ..default()
         },
         Transform::from_translation(Vec3::new(0.0, -200.0, 0.0)),
         TextRotator(0.0),

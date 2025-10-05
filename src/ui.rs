@@ -24,12 +24,20 @@ impl LinkedRubyText {
 
 pub(crate) fn add_ruby(
     on: On<Add, Ruby>,
-    ruby_ui: Query<(&Ruby, &TextFont, Option<&ChildOf>), With<Text>>,
+    ruby_ui: Query<(&Ruby, &TextFont, Option<&ChildOf>, &ZIndex), With<Text>>,
     commands: Commands,
 ) {
-    if let Ok((ruby, text_font, child_of)) = ruby_ui.get(on.entity) {
+    if let Ok((ruby, text_font, child_of, &z_index)) = ruby_ui.get(on.entity) {
         let parent = child_of.map(ChildOf::parent);
-        create_ruby_text(on, commands, parent, ruby, text_font, ruby.font_size_scale);
+        create_ruby_text(
+            on,
+            commands,
+            parent,
+            ruby,
+            text_font,
+            ruby.font_size_scale,
+            z_index,
+        );
     }
 }
 
@@ -38,10 +46,17 @@ pub(crate) fn add_ruby_text_span(
     ruby: Query<&Ruby, With<TextSpan>>,
     text_font: Query<&TextFont>,
     ancestors: Query<&ChildOf>,
+    nodes: Query<&ZIndex, (With<Node>, With<Text>)>,
     commands: Commands,
 ) {
     if let Ok(ruby) = ruby.get(on.entity) {
         let Ok(&ChildOf(parent)) = ancestors.get(on.entity) else {
+            return;
+        };
+
+        // ZIndex is a required component of `Node`
+        let Ok(&z_index) = nodes.get(parent) else {
+            // Not a UI text span
             return;
         };
 
@@ -58,6 +73,7 @@ pub(crate) fn add_ruby_text_span(
             ruby,
             text_font,
             ruby.font_size_scale,
+            z_index,
         );
     }
 }
@@ -69,6 +85,7 @@ fn create_ruby_text(
     ruby: &Ruby,
     text_font: &TextFont,
     font_size_scale: f32,
+    z_index: ZIndex,
 ) {
     let rt_id = commands
         .spawn((
@@ -78,6 +95,8 @@ fn create_ruby_text(
                 position_type: PositionType::Absolute,
                 ..default()
             },
+            // Order higher than original text
+            ZIndex(z_index.0 + 1),
             ruby_text_font(text_font, font_size_scale),
         ))
         .id();
@@ -143,7 +162,6 @@ pub(crate) fn update_ruby(
         };
 
         let Ok(layout_info) = text_layouts.get(node_entity) else {
-            error!("No TextLayoutInfo for entity {:?}", node_entity);
             continue;
         };
         let Some(section_rect) = layout_info
@@ -192,7 +210,6 @@ pub(crate) fn update_ruby(
         let Ok((ruby_computed_node, mut rt_global_transform, mut rt_transform, _)) =
             node_query.get_mut(rt_id)
         else {
-            error!("No UiGlobalTransform for ruby text entity {:?}", rt_id);
             continue;
         };
 

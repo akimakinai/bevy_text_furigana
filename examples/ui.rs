@@ -188,6 +188,10 @@ fn startup(mut commands: Commands, assets: Res<AssetServer>) {
                                 rt: "しながは".into(),
                                 ..default()
                             },
+                            Node {
+                                margin: UiRect::left(px(20)),
+                                ..default()
+                            },
                         ))
                         .with_child((
                             TextSpan::new("下末吉村"),

@@ -23,11 +23,18 @@ impl LinkedRubyText2d {
 
 pub(crate) fn add_ruby_2d(
     on: On<Add, Ruby>,
-    ruby: Query<(&Ruby, &TextFont), With<Text2d>>,
+    ruby: Query<(&Ruby, &TextFont, &Transform), With<Text2d>>,
     commands: Commands,
 ) {
-    if let Ok((ruby, text_font)) = ruby.get(on.entity) {
-        create_ruby_text_2d(on, commands, ruby, text_font, ruby.font_size_scale);
+    if let Ok((ruby, text_font, transform)) = ruby.get(on.entity) {
+        create_ruby_text_2d(
+            on,
+            commands,
+            ruby,
+            text_font,
+            ruby.font_size_scale,
+            transform,
+        );
     }
 }
 
@@ -36,7 +43,7 @@ pub(crate) fn add_ruby_text_span_2d(
     ruby: Query<&Ruby, With<TextSpan>>,
     text_font: Query<&TextFont>,
     ancestors: Query<&ChildOf>,
-    text_2d: Query<(), With<Text2d>>,
+    text_2d: Query<&Transform, With<Text2d>>,
     commands: Commands,
 ) {
     if let Ok(ruby) = ruby.get(on.entity) {
@@ -48,11 +55,18 @@ pub(crate) fn add_ruby_text_span_2d(
             return;
         };
 
-        if text_2d.get(parent).is_err() {
+        let Ok(transform) = text_2d.get(parent) else {
             return;
-        }
+        };
 
-        create_ruby_text_2d(on, commands, ruby, text_font, ruby.font_size_scale);
+        create_ruby_text_2d(
+            on,
+            commands,
+            ruby,
+            text_font,
+            ruby.font_size_scale,
+            transform,
+        );
     }
 }
 
@@ -62,11 +76,14 @@ fn create_ruby_text_2d(
     ruby: &Ruby,
     text_font: &TextFont,
     font_size_scale: f32,
+    transform: &Transform,
 ) {
     commands.spawn((
         RubyText2d(on.entity),
         Text2d(ruby.rt.clone()),
         ruby_text_font(text_font, font_size_scale),
+        // Order higher than original text
+        Transform::from_translation(Vec3::new(0.0, 0.0, transform.translation.z + 0.01)),
     ));
 }
 
@@ -121,7 +138,6 @@ pub(crate) fn update_ruby_2d(
         };
 
         let Ok(layout_info) = text_layouts.get(text_entity) else {
-            error!("No TextLayoutInfo for entity {:?}", text_entity);
             continue;
         };
 
@@ -144,16 +160,16 @@ pub(crate) fn update_ruby_2d(
             },
         );
 
-        let mut ruby_pos = ruby_pos_local.extend(0.0) - layout_info.size.extend(0.0) / 2.0;
+        let Ok(mut transform) = ruby_transforms.get_mut(rt_id) else {
+            continue;
+        };
+
+        let mut ruby_pos =
+            ruby_pos_local.extend(transform.translation.z) - layout_info.size.extend(0.0) / 2.0;
         // Y+ down to Y+ up
         ruby_pos.y = -ruby_pos.y;
 
         let ruby_pos_global = text_global_transform.transform_point(ruby_pos);
-
-        let Ok(mut transform) = ruby_transforms.get_mut(rt_id) else {
-            error!("No Transform for ruby text 2d entity {:?}", rt_id);
-            continue;
-        };
 
         let ruby_rotation = text_global_transform.to_scale_rotation_translation().1;
 
