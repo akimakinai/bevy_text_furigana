@@ -145,7 +145,11 @@ fn startup(mut commands: Commands, assets: Res<AssetServer>) {
                 ))
                 .with_children(|parent| {
                     parent
-                        .spawn((Text(String::new()), text_font.clone()))
+                        .spawn((
+                            Text(String::new()),
+                            TextLayout::new_with_justify(Justify::Center),
+                            text_font.clone(),
+                        ))
                         .with_children(|parent| {
                             parent.spawn((TextSpan::new("とある"), text_font.clone()));
                             parent.spawn((
