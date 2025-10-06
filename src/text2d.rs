@@ -24,10 +24,10 @@ impl LinkedRubyText2d {
 
 pub(crate) fn add_ruby_2d(
     on: On<Add, Ruby>,
-    ruby: Query<(&Ruby, &TextFont, &Transform), With<Text2d>>,
+    ruby: Query<(&Ruby, &TextFont, &Transform, &TextColor), With<Text2d>>,
     commands: Commands,
 ) {
-    if let Ok((ruby, text_font, transform)) = ruby.get(on.entity) {
+    if let Ok((ruby, text_font, transform, text_color)) = ruby.get(on.entity) {
         create_ruby_text_2d(
             on,
             commands,
@@ -35,6 +35,7 @@ pub(crate) fn add_ruby_2d(
             text_font,
             ruby.font_size_scale,
             transform,
+            *text_color,
         );
     }
 }
@@ -42,7 +43,7 @@ pub(crate) fn add_ruby_2d(
 pub(crate) fn add_ruby_text_span_2d(
     on: On<Add, Ruby>,
     ruby: Query<&Ruby, With<TextSpan>>,
-    text_font: Query<&TextFont>,
+    text_config: Query<(&TextFont, &TextColor)>,
     ancestors: Query<&ChildOf>,
     text_2d: Query<&Transform, With<Text2d>>,
     commands: Commands,
@@ -52,7 +53,7 @@ pub(crate) fn add_ruby_text_span_2d(
             return;
         };
 
-        let Ok(text_font) = text_font.get(on.entity) else {
+        let Ok((text_font, color)) = text_config.get(on.entity) else {
             return;
         };
 
@@ -67,6 +68,7 @@ pub(crate) fn add_ruby_text_span_2d(
             text_font,
             ruby.font_size_scale,
             transform,
+            *color,
         );
     }
 }
@@ -78,11 +80,13 @@ fn create_ruby_text_2d(
     text_font: &TextFont,
     font_size_scale: f32,
     transform: &Transform,
+    text_color: TextColor,
 ) {
     commands.spawn((
         RubyText2d(on.entity),
         Text2d(ruby.rt.clone()),
         ruby_text_font(text_font, font_size_scale),
+        ruby.color.unwrap_or(text_color),
         // Order higher than original text
         Transform::from_translation(Vec3::new(0.0, 0.0, transform.translation.z + 0.01)),
     ));
@@ -96,11 +100,11 @@ fn ruby_text_font(text_font: &TextFont, font_size_scale: f32) -> TextFont {
 }
 
 pub(crate) fn update_ruby_text_2d(
-    mut ruby_text: Query<(&RubyText2d, &mut Text2d, &mut TextFont), Without<Ruby>>,
-    ruby: Query<(Ref<Ruby>, Ref<TextFont>)>,
+    mut ruby_text: Query<(&RubyText2d, &mut Text2d, &mut TextFont, &mut TextColor), Without<Ruby>>,
+    ruby: Query<(Ref<Ruby>, Ref<TextFont>, &TextColor)>,
 ) {
-    for (&RubyText2d(rt_id), mut text, mut ruby_font) in &mut ruby_text {
-        if let Ok((ruby, text_font)) = ruby.get(rt_id) {
+    for (&RubyText2d(rt_id), mut text, mut ruby_font, mut ruby_text_color) in &mut ruby_text {
+        if let Ok((ruby, text_font, text_color)) = ruby.get(rt_id) {
             if ruby.is_changed() && text.0 != ruby.rt {
                 text.0 = ruby.rt.clone();
             }
@@ -108,6 +112,12 @@ pub(crate) fn update_ruby_text_2d(
             if text_font.is_changed() {
                 *ruby_font = ruby_text_font(&text_font, ruby.font_size_scale);
             }
+
+            *ruby_text_color = if let Some(set_color) = ruby.color {
+                set_color
+            } else {
+                *text_color
+            };
         }
     }
 }

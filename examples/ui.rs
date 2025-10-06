@@ -47,8 +47,7 @@ fn startup(mut commands: Commands, assets: Res<AssetServer>) {
                     Ruby {
                         rt: rt.into(),
                         position,
-                        align: RubyAlign::default(),
-                        font_size_scale: 0.5,
+                        ..default()
                     },
                 ));
             } else {
@@ -205,6 +204,7 @@ fn startup(mut commands: Commands, assets: Res<AssetServer>) {
                         .spawn((
                             Text::new("品川\n"),
                             text_font.clone(),
+                            TextColor(bevy::color::palettes::css::GREEN.into()),
                             Ruby {
                                 rt: "しながは".into(),
                                 ..default()

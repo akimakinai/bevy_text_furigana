@@ -25,10 +25,10 @@ impl LinkedRubyText {
 
 pub(crate) fn add_ruby(
     on: On<Add, Ruby>,
-    ruby_ui: Query<(&Ruby, &TextFont, Option<&ChildOf>, &ZIndex), With<Text>>,
+    ruby_ui: Query<(&Ruby, &TextFont, Option<&ChildOf>, &ZIndex, &TextColor), With<Text>>,
     commands: Commands,
 ) {
-    if let Ok((ruby, text_font, child_of, &z_index)) = ruby_ui.get(on.entity) {
+    if let Ok((ruby, text_font, child_of, &z_index, text_color)) = ruby_ui.get(on.entity) {
         let parent = child_of.map(ChildOf::parent);
         create_ruby_text(
             on,
@@ -38,6 +38,7 @@ pub(crate) fn add_ruby(
             text_font,
             ruby.font_size_scale,
             z_index,
+            *text_color,
         );
     }
 }
@@ -45,7 +46,7 @@ pub(crate) fn add_ruby(
 pub(crate) fn add_ruby_text_span(
     on: On<Add, Ruby>,
     ruby: Query<&Ruby, With<TextSpan>>,
-    text_font: Query<&TextFont>,
+    text_config: Query<(&TextFont, &TextColor)>,
     ancestors: Query<&ChildOf>,
     nodes: Query<&ZIndex, (With<Node>, With<Text>)>,
     commands: Commands,
@@ -61,7 +62,7 @@ pub(crate) fn add_ruby_text_span(
             return;
         };
 
-        let Ok(text_font) = text_font.get(on.entity).or_else(|_| text_font.get(parent)) else {
+        let Ok((text_font, color)) = text_config.get(on.entity) else {
             return;
         };
 
@@ -75,6 +76,7 @@ pub(crate) fn add_ruby_text_span(
             text_font,
             ruby.font_size_scale,
             z_index,
+            *color,
         );
     }
 }
@@ -87,6 +89,7 @@ fn create_ruby_text(
     text_font: &TextFont,
     font_size_scale: f32,
     z_index: ZIndex,
+    text_color: TextColor,
 ) {
     let rt_id = commands
         .spawn((
@@ -99,6 +102,7 @@ fn create_ruby_text(
             // Order higher than original text
             ZIndex(z_index.0 + 1),
             ruby_text_font(text_font, font_size_scale),
+            ruby.color.unwrap_or(text_color),
         ))
         .id();
     if let Some(parent) = parent {
@@ -114,11 +118,11 @@ fn ruby_text_font(text_font: &TextFont, font_size_scale: f32) -> TextFont {
 }
 
 pub(crate) fn update_ruby_text(
-    mut ruby_text: Query<(&RubyText, &mut Text, &mut TextFont), Without<Ruby>>,
-    ruby: Query<(Ref<Ruby>, Ref<TextFont>)>,
+    mut ruby_text: Query<(&RubyText, &mut Text, &mut TextFont, &mut TextColor), Without<Ruby>>,
+    ruby: Query<(Ref<Ruby>, Ref<TextFont>, &TextColor)>,
 ) {
-    for (&RubyText(rt_id), mut text, mut ruby_font) in &mut ruby_text {
-        if let Ok((ruby, text_font)) = ruby.get(rt_id) {
+    for (&RubyText(rt_id), mut text, mut ruby_font, mut ruby_text_color) in &mut ruby_text {
+        if let Ok((ruby, text_font, text_color)) = ruby.get(rt_id) {
             if ruby.is_changed() && text.0 != ruby.rt {
                 text.0 = ruby.rt.clone();
             }
@@ -126,6 +130,12 @@ pub(crate) fn update_ruby_text(
             if text_font.is_changed() {
                 *ruby_font = ruby_text_font(&text_font, ruby.font_size_scale);
             }
+
+            *ruby_text_color = if let Some(set_color) = ruby.color {
+                set_color
+            } else {
+                *text_color
+            };
         }
     }
 }
