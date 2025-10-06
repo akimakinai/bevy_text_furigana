@@ -1,6 +1,6 @@
 use bevy::{prelude::*, text::TextLayoutInfo};
 
-use crate::{Ruby, RubyPosition};
+use crate::{Ruby, RubyAlign, RubyPosition};
 
 /// Component for 2D ruby text entity.
 #[derive(Component, Clone, Copy)]
@@ -148,12 +148,16 @@ pub(crate) fn update_ruby_2d(
             .map(|&(_, rect)| rect)
             .unwrap_or(Rect::new(0.0, 0.0, 0.0, 0.0));
 
-        let Ok(text_global_transform) = text_2d_transforms.get(text_entity) else {
+        let Ok(ruby_layout_info) = text_layouts.get(rt_id) else {
             continue;
         };
 
         let ruby_pos_local = Vec2::new(
-            (section_rect.min.x + section_rect.max.x) / 2.0,
+            match ruby.align {
+                RubyAlign::Start => section_rect.min.x + ruby_layout_info.size.x / 2.0,
+                RubyAlign::Center => (section_rect.min.x + section_rect.max.x) / 2.0,
+                RubyAlign::End => section_rect.max.x - ruby_layout_info.size.x / 2.0,
+            },
             match ruby.position {
                 RubyPosition::Over => section_rect.min.y,
                 RubyPosition::Under => section_rect.max.y,
@@ -168,6 +172,10 @@ pub(crate) fn update_ruby_2d(
             ruby_pos_local.extend(transform.translation.z) - layout_info.size.extend(0.0) / 2.0;
         // Y+ down to Y+ up
         ruby_pos.y = -ruby_pos.y;
+
+        let Ok(text_global_transform) = text_2d_transforms.get(text_entity) else {
+            continue;
+        };
 
         let ruby_pos_global = text_global_transform.transform_point(ruby_pos);
 

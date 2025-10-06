@@ -1,6 +1,6 @@
 use bevy::{math::Affine2, prelude::*, text::TextLayoutInfo};
 
-use crate::{FuriganaSettings, Ruby, RubyPosition};
+use crate::{FuriganaSettings, Ruby, RubyAlign, RubyPosition};
 
 /// Component for UI ruby text entity.
 #[derive(Component, Clone, Copy)]
@@ -187,16 +187,24 @@ pub(crate) fn update_ruby(
             (1.0, UiGlobalTransform::default(), ComputedNode::default())
         };
 
-        let Ok((node_computed, node_global_transform, &node_transform, _)) =
+        let Ok((&node_computed, &node_global_transform, &node_transform, _)) =
             node_query.get(node_entity)
         else {
             continue;
         };
 
-        let (text_scale, text_angle, _) = node_global_transform.to_scale_angle_translation();
+        let Ok((ruby_computed_node, mut rt_global_transform, mut rt_transform, _)) =
+            node_query.get_mut(rt_id)
+        else {
+            continue;
+        };
 
         let ruby_pos_local_topleft = Vec2::new(
-            (section_rect.min.x + section_rect.max.x) / 2.0,
+            match ruby.align {
+                RubyAlign::Start => section_rect.min.x + ruby_computed_node.size().x / 2.0,
+                RubyAlign::Center => (section_rect.min.x + section_rect.max.x) / 2.0,
+                RubyAlign::End => section_rect.max.x - ruby_computed_node.size().x / 2.0,
+            },
             match ruby.position {
                 RubyPosition::Over => section_rect.min.y,
                 RubyPosition::Under => section_rect.max.y,
@@ -207,16 +215,12 @@ pub(crate) fn update_ruby(
 
         let ruby_pos_global = node_global_transform.transform_point2(ruby_pos_local);
 
-        let Ok((ruby_computed_node, mut rt_global_transform, mut rt_transform, _)) =
-            node_query.get_mut(rt_id)
-        else {
-            continue;
-        };
-
         rt_transform.scale = node_transform.scale;
         rt_transform.rotation = node_transform.rotation;
 
         if settings.update_ui_global_transform {
+            let (text_scale, text_angle, _) = node_global_transform.to_scale_angle_translation();
+
             rt_global_transform.set_if_neq(UiGlobalTransform::from(
                 Affine2::from_scale_angle_translation(text_scale, text_angle, ruby_pos_global),
             ));

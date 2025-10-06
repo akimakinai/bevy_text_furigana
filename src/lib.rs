@@ -52,6 +52,7 @@ impl Default for FuriganaSettings {
 pub struct Ruby {
     pub rt: String,
     pub position: RubyPosition,
+    pub align: RubyAlign,
     pub font_size_scale: f32,
 }
 
@@ -60,6 +61,7 @@ impl Ruby {
         Self {
             rt: rt.into(),
             position: RubyPosition::default(),
+            align: RubyAlign::default(),
             font_size_scale: 0.5,
         }
     }
@@ -76,4 +78,12 @@ pub enum RubyPosition {
     #[default]
     Over,
     Under,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub enum RubyAlign {
+    Start,
+    #[default]
+    Center,
+    End,
 }

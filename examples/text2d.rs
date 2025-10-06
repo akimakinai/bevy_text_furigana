@@ -37,6 +37,7 @@ fn startup(mut commands: Commands, assets: Res<AssetServer>) {
                     Ruby {
                         rt: rt.into(),
                         position,
+                        align: RubyAlign::default(),
                         font_size_scale: 0.5,
                     },
                 ));
@@ -66,7 +67,7 @@ fn startup(mut commands: Commands, assets: Res<AssetServer>) {
                 rt: "とし".into(),
                 ..default()
             },
-            Transform::from_translation(Vec3::new(0.0, 0.0, 0.0)),
+            Transform::from_translation(Vec3::new(0.0, 200.0, 0.0)),
         ))
         .with_children(|parent| {
             ruby_spans(
@@ -123,8 +124,46 @@ fn startup(mut commands: Commands, assets: Res<AssetServer>) {
             position: RubyPosition::Under,
             ..default()
         },
-        Transform::from_translation(Vec3::new(0.0, -200.0, 0.0)),
+        Transform::from_translation(Vec3::new(0.0, 0.0, 0.0)),
         TextRotator(0.0),
+    ));
+
+    commands.spawn((
+        Text2d::default(),
+        text_font.clone(),
+        Transform::from_translation(Vec3::new(0.0, -200.0, 0.0)),
+        children![
+            // Sampled from 探検実記
+            (
+                TextSpan::new("幻花翁"),
+                text_font.clone(),
+                Ruby {
+                    rt: "げんくわおう".into(),
+                    align: RubyAlign::Start,
+                    ..default()
+                },
+            ),
+            (TextSpan::new("、"), text_font.clone()),
+            (
+                TextSpan::new("望蜀生"),
+                text_font.clone(),
+                Ruby {
+                    rt: "ぼうしよくせい".into(),
+                    align: RubyAlign::Center,
+                    ..default()
+                },
+            ),
+            (TextSpan::new("、"), text_font.clone()),
+            (
+                TextSpan::new("玄川子"),
+                text_font.clone(),
+                Ruby {
+                    rt: "げんせんし".into(),
+                    align: RubyAlign::End,
+                    ..default()
+                },
+            ),
+        ],
     ));
 
     commands.spawn((Camera2d, Camera::default()));

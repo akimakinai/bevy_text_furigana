@@ -47,6 +47,7 @@ fn startup(mut commands: Commands, assets: Res<AssetServer>) {
                     Ruby {
                         rt: rt.into(),
                         position,
+                        align: RubyAlign::default(),
                         font_size_scale: 0.5,
                     },
                 ));
@@ -143,6 +144,7 @@ fn startup(mut commands: Commands, assets: Res<AssetServer>) {
                         rt: "レールガン".into(),
                         position: RubyPosition::Under,
                         font_size_scale: 0.8,
+                        ..default()
                     },
                 )],
             ));
@@ -160,24 +162,43 @@ fn startup(mut commands: Commands, assets: Res<AssetServer>) {
                     BorderColor::all(Color::BLACK),
                 ))
                 .with_children(|parent| {
-                    parent
-                        .spawn((
-                            Text::default(),
-                            TextLayout::new_with_justify(Justify::Center),
-                            text_font.clone(),
-                        ))
-                        .with_children(|parent| {
+                    parent.spawn((
+                        Text::default(),
+                        TextLayout::new_with_justify(Justify::Center),
+                        text_font.clone(),
+                        children![
                             // Sampled from 探検実記
-                            ruby_spans(
-                                parent,
-                                &[
-                                    ("幻花翁、\n", Some("げんくわおう")),
-                                    ("望蜀生、\n", Some("ぼうしよくせい")),
-                                    ("玄川子", Some("げんせんし")),
-                                ],
-                                RubyPosition::Over,
-                            );
-                        });
+                            (
+                                TextSpan::new("幻花翁"),
+                                text_font.clone(),
+                                Ruby {
+                                    rt: "げんくわおう".into(),
+                                    align: RubyAlign::Start,
+                                    ..default()
+                                },
+                            ),
+                            (TextSpan::new("、\n"), text_font.clone()),
+                            (
+                                TextSpan::new("望蜀生"),
+                                text_font.clone(),
+                                Ruby {
+                                    rt: "ぼうしよくせい".into(),
+                                    align: RubyAlign::Center,
+                                    ..default()
+                                },
+                            ),
+                            (TextSpan::new("、\n"), text_font.clone()),
+                            (
+                                TextSpan::new("玄川子"),
+                                text_font.clone(),
+                                Ruby {
+                                    rt: "げんせんし".into(),
+                                    align: RubyAlign::End,
+                                    ..default()
+                                },
+                            ),
+                        ],
+                    ));
 
                     // FIXME: these are broken
                     parent
