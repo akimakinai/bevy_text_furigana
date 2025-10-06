@@ -243,3 +243,31 @@ pub(crate) fn update_ruby(
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_add_ruby_creates_ruby_text() {
+        let mut app = App::new();
+        app.add_plugins(crate::FuriganaPlugin);
+
+        let text_entity = app
+            .world_mut()
+            .spawn((Ruby::new("ruby"), Text::new("text")))
+            .id();
+
+        let linked = app.world().get::<LinkedRubyText>(text_entity).unwrap();
+        let ruby_text = app.world().get::<Text>(linked.entity()).unwrap();
+        assert_eq!(ruby_text.0, "ruby");
+
+        // 2D counterpart must not be created
+        #[cfg(feature = "text2d")]
+        assert!(
+            app.world()
+                .get::<crate::text2d::LinkedRubyText2d>(text_entity)
+                .is_none()
+        );
+    }
+}
