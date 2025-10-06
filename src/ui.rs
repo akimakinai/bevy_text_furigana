@@ -2,7 +2,8 @@ use bevy::{math::Affine2, prelude::*, text::TextLayoutInfo};
 
 use crate::{FuriganaSettings, Ruby, RubyAlign, RubyPosition};
 
-/// Component for UI ruby text entity.
+/// Component for UI ruby text.
+/// Automatically spawned when [`Ruby`] component is added along with `Text` or `TextSpan`.
 #[derive(Component, Clone, Copy)]
 #[require(Node)]
 #[relationship(relationship_target = LinkedRubyText)]

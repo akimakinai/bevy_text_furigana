@@ -2,7 +2,8 @@ use bevy::{prelude::*, text::TextLayoutInfo};
 
 use crate::{Ruby, RubyAlign, RubyPosition};
 
-/// Component for 2D ruby text entity.
+/// Component for 2D ruby text.
+/// Automatically spawned when [`Ruby`] component is added along with `Text2d` or `TextSpan`.
 #[derive(Component, Clone, Copy)]
 #[relationship(relationship_target = LinkedRubyText2d)]
 pub struct RubyText2d(

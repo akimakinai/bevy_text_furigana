@@ -1,3 +1,4 @@
+//! Naive implementation of [Ruby characters](https://en.wikipedia.org/wiki/Ruby_character) for UI and 2D Text in Bevy.
 #[cfg(feature = "text2d")]
 mod text2d;
 mod ui;
@@ -48,11 +49,14 @@ impl Default for FuriganaSettings {
     }
 }
 
+/// Component to add ruby text to a `Text`, `Text2d`, or `TextSpan`.
 #[derive(Component, Clone, Debug)]
 pub struct Ruby {
+    /// Ruby text.
     pub rt: String,
     pub position: RubyPosition,
     pub align: RubyAlign,
+    /// Font size relative to this text's font size. (e.g. 0.5 for half size)
     pub font_size_scale: f32,
 }
 
@@ -75,15 +79,30 @@ impl Default for Ruby {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub enum RubyPosition {
+    /// Example:
+    /// 
+    /// <ruby style="ruby-position: over"><rb>Lorem ipsum</rb><rt>Ruby</rt></ruby>
     #[default]
     Over,
+    /// Example:
+    /// 
+    /// <ruby style="ruby-position: under"><rb>Lorem ipsum</rb><rt>Ruby</rt></ruby>
     Under,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub enum RubyAlign {
+    /// Example:
+    /// 
+    /// <ruby style="ruby-align: start"><rb>Lorem ipsum</rb><rt>Ruby</rt></ruby>
     Start,
+    /// Example:
+    /// 
+    /// <ruby style="ruby-align: center"><rb>Lorem ipsum</rb><rt>Ruby</rt></ruby>
     #[default]
     Center,
+    /// Example:
+    /// 
+    /// <ruby style="ruby-align: end"><rb>Lorem ipsum</rb><rt>Ruby</rt></ruby>
     End,
 }
