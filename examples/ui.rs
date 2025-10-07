@@ -315,6 +315,12 @@ mod ui_gizmos {
     ) -> Result<()> {
         let (camera, camera_transform) = camera.single()?;
 
+        let viewport_position = camera
+            .viewport
+            .as_ref()
+            .map(|v| v.physical_position.as_vec2())
+            .unwrap_or_default();
+
         for (computed_node, transform) in &nodes {
             let positions = [
                 Vec2::new(-0.5, -0.5),
@@ -324,10 +330,8 @@ mod ui_gizmos {
                 Vec2::new(-0.5, -0.5),
             ]
             .into_iter()
-            .map(|v| {
-                transform.transform_point2(v * computed_node.size)
-                    * computed_node.inverse_scale_factor
-            });
+            .map(|v| transform.transform_point2(v * computed_node.size) + viewport_position)
+            .map(|v| v * computed_node.inverse_scale_factor);
 
             gizmos.linestrip_2d(
                 positions
