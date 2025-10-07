@@ -1,5 +1,6 @@
 use bevy::{
     asset::UnapprovedPathMode,
+    camera::visibility::RenderLayers,
     ecs::relationship::RelatedSpawnerCommands,
     input::keyboard::Key,
     log::{DEFAULT_FILTER, LogPlugin},
@@ -10,8 +11,10 @@ use bevy::{
 
 use bevy_text_furigana::*;
 
+use crate::ui_gizmos::UiGizmoCamera;
+
 fn main() {
-    let scale_factor = 1.0;
+    let scale_factor = 1.2;
     App::new()
         .add_plugins(
             DefaultPlugins
@@ -170,6 +173,11 @@ fn startup(mut commands: Commands, assets: Res<AssetServer>) {
                     },
                     UiRotator(0.0),
                     BorderColor::all(Color::BLACK),
+                    UiTransform {
+                        rotation: Rot2::degrees(15.0),
+                        scale: Vec2::new(1.5, 1.2),
+                        translation: Val2::new(px(300), px(150)),
+                    },
                 ))
                 .with_children(|parent| {
                     parent.spawn((
@@ -260,7 +268,33 @@ fn startup(mut commands: Commands, assets: Res<AssetServer>) {
             );
         });
 
-    commands.spawn((Camera2d, Camera::default()));
+    commands.spawn((
+        UiGizmoCamera,
+        Camera2d,
+        Camera {
+            // viewport: Some(bevy::camera::Viewport {
+            //     physical_position: UVec2::new(200, 200),
+            //     physical_size: UVec2::new(1800, 600),
+            //     ..default()
+            // }),
+            ..default()
+        },
+    ));
+
+    commands.spawn((
+        Camera2d,
+        Camera {
+            order: 1,
+            viewport: Some(bevy::camera::Viewport {
+                physical_position: UVec2::new(0, 100),
+                physical_size: UVec2::new(1000, 800),
+                ..default()
+            }),
+            ..default()
+        },
+        RenderLayers::layer(1),
+        IsDefaultUiCamera,
+    ));
 }
 
 #[derive(Component)]
@@ -298,6 +332,9 @@ mod ui_gizmos {
             );
     }
 
+    #[derive(Component)]
+    pub struct UiGizmoCamera;
+
     #[derive(Resource, Default, PartialEq)]
     struct EnableUiGizmos(bool);
 
@@ -310,16 +347,25 @@ mod ui_gizmos {
 
     fn add_ui_gizmos(
         nodes: Query<(&ComputedNode, &UiGlobalTransform)>,
-        camera: Query<(&Camera, &GlobalTransform)>,
+        camera: Query<(&Camera, &GlobalTransform, Has<UiGizmoCamera>)>,
+        ui_camera: DefaultUiCamera,
         mut gizmos: Gizmos,
     ) -> Result<()> {
-        let (camera, camera_transform) = camera.single()?;
+        let Some(ui_camera) = ui_camera.get() else {
+            return Ok(());
+        };
 
-        let viewport_position = camera
+        let (ui_camera, ..) = camera.get(ui_camera)?;
+
+        let ui_camera_pos = ui_camera
             .viewport
             .as_ref()
             .map(|v| v.physical_position.as_vec2())
             .unwrap_or_default();
+
+        let Some((camera, camera_transform, _)) = camera.iter().find(|(_, _, c)| *c) else {
+            return Ok(());
+        };
 
         for (computed_node, transform) in &nodes {
             let positions = [
@@ -330,7 +376,7 @@ mod ui_gizmos {
                 Vec2::new(-0.5, -0.5),
             ]
             .into_iter()
-            .map(|v| transform.transform_point2(v * computed_node.size) + viewport_position)
+            .map(|v| transform.transform_point2(v * computed_node.size) + ui_camera_pos)
             .map(|v| v * computed_node.inverse_scale_factor);
 
             gizmos.linestrip_2d(
