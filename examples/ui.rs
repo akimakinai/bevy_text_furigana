@@ -316,19 +316,29 @@ mod ui_gizmos {
         let (camera, camera_transform) = camera.single()?;
 
         for (computed_node, transform) in &nodes {
-            let (scale, angle, translation) = transform.to_scale_angle_translation();
+            let positions = [
+                Vec2::new(-0.5, -0.5),
+                Vec2::new(0.5, -0.5),
+                Vec2::new(0.5, 0.5),
+                Vec2::new(-0.5, 0.5),
+                Vec2::new(-0.5, -0.5),
+            ]
+            .into_iter()
+            .map(|v| {
+                transform
+                    .transform_point2(v * computed_node.size * computed_node.inverse_scale_factor)
+            });
 
-            let translation = translation * computed_node.inverse_scale_factor;
-            let translation = camera.viewport_to_world_2d(camera_transform, translation)?;
-
-            gizmos.rect_2d(
-                Isometry2d::new(
-                    translation,
-                    Rot2::from(camera_transform.rotation().to_scaled_axis().z - angle),
-                ),
-                computed_node.size * computed_node.inverse_scale_factor * scale,
+            gizmos.linestrip_2d(
+                positions
+                    .map(|v| {
+                        camera
+                            .viewport_to_world_2d(camera_transform, v)
+                            .map_err(BevyError::from)
+                    })
+                    .collect::<Result<Vec<_>>>()?,
                 GREEN,
-            )
+            );
         }
 
         Ok(())
