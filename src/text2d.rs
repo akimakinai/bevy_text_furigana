@@ -152,12 +152,18 @@ pub(crate) fn update_ruby_2d(
             continue;
         };
 
-        let section_rect = layout_info
+        let Some(section_rect) = layout_info
             .section_rects
             .iter()
             .find(|&&(id, _)| id == ruby_entity)
             .map(|&(_, rect)| rect)
-            .unwrap_or(Rect::new(0.0, 0.0, 0.0, 0.0));
+        else {
+            continue;
+        };
+        let section_rect = Rect::from_corners(
+            section_rect.min / layout_info.scale_factor,
+            section_rect.max / layout_info.scale_factor,
+        );
 
         let Ok(ruby_layout_info) = text_layouts.get(rt_id) else {
             continue;

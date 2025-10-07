@@ -1,16 +1,28 @@
 use bevy::{
     asset::UnapprovedPathMode, ecs::relationship::RelatedSpawnerCommands, prelude::*,
-    text::LineHeight,
+    text::LineHeight, window::WindowResolution,
 };
 
 use bevy_text_furigana::*;
 
 fn main() {
+    let scale_factor = 1.0;
     App::new()
-        .add_plugins(DefaultPlugins.set(AssetPlugin {
-            unapproved_path_mode: UnapprovedPathMode::Allow,
-            ..default()
-        }))
+        .add_plugins(
+            DefaultPlugins
+                .set(AssetPlugin {
+                    unapproved_path_mode: UnapprovedPathMode::Allow,
+                    ..default()
+                })
+                .set(WindowPlugin {
+                    primary_window: Some(Window {
+                        resolution: WindowResolution::default()
+                            .with_scale_factor_override(scale_factor),
+                        ..default()
+                    }),
+                    ..default()
+                }),
+        )
         .add_plugins(FuriganaPlugin)
         .add_systems(Startup, startup)
         .add_systems(Update, rotate_text)

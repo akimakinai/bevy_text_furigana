@@ -142,12 +142,7 @@ pub(crate) fn update_ruby_text(
 
 pub(crate) fn update_ruby(
     text_layouts: Query<&TextLayoutInfo>,
-    mut node_query: Query<(
-        &ComputedNode,
-        &mut UiGlobalTransform,
-        &mut UiTransform,
-        &ComputedUiRenderTargetInfo,
-    )>,
+    mut node_query: Query<(&ComputedNode, &mut UiGlobalTransform, &mut UiTransform)>,
     ruby_query: Query<
         (
             Entity,
@@ -184,27 +179,22 @@ pub(crate) fn update_ruby(
             continue;
         };
 
-        let (scale_factor, parent_global, parent_computed) = if let Ok(&ChildOf(node_parent)) =
+        let (parent_global, parent_computed) = if let Ok(&ChildOf(node_parent)) =
             ancestors.get(node_entity)
-            && let Ok((parent_computed, parent_global, .., parent_render_target)) =
-                node_query.get(node_parent)
+            && let Ok((parent_computed, parent_global, _)) = node_query.get(node_parent)
         {
-            (
-                parent_render_target.scale_factor(),
-                *parent_global,
-                *parent_computed,
-            )
+            (*parent_global, *parent_computed)
         } else {
-            (1.0, UiGlobalTransform::default(), ComputedNode::default())
+            (UiGlobalTransform::default(), ComputedNode::default())
         };
 
-        let Ok((&node_computed, &node_global_transform, &node_transform, _)) =
+        let Ok((&node_computed, &node_global_transform, &node_transform)) =
             node_query.get(node_entity)
         else {
             continue;
         };
 
-        let Ok((ruby_computed_node, mut rt_global_transform, mut rt_transform, _)) =
+        let Ok((ruby_computed_node, mut rt_global_transform, mut rt_transform)) =
             node_query.get_mut(rt_id)
         else {
             continue;
@@ -246,8 +236,8 @@ pub(crate) fn update_ruby(
             + parent_computed.size() / 2.0
             - Vec2::new(parent_computed.border().left, parent_computed.border().top)
             - ruby_computed_node.size() / 2.0;
-        let new_top = Val::Px(ruby_top_left.y / scale_factor);
-        let new_left = Val::Px(ruby_top_left.x / scale_factor);
+        let new_top = Val::Px(ruby_top_left.y * parent_computed.inverse_scale_factor);
+        let new_left = Val::Px(ruby_top_left.x * parent_computed.inverse_scale_factor);
         if node.top != new_top {
             node.top = new_top;
         }

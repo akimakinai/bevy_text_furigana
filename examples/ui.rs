@@ -5,11 +5,13 @@ use bevy::{
     log::{DEFAULT_FILTER, LogPlugin},
     prelude::*,
     text::LineHeight,
+    window::WindowResolution,
 };
 
 use bevy_text_furigana::*;
 
 fn main() {
+    let scale_factor = 1.0;
     App::new()
         .add_plugins(
             DefaultPlugins
@@ -19,6 +21,14 @@ fn main() {
                 })
                 .set(LogPlugin {
                     filter: format!("{},{}=debug", DEFAULT_FILTER, env!("CARGO_PKG_NAME")),
+                    ..default()
+                })
+                .set(WindowPlugin {
+                    primary_window: Some(Window {
+                        resolution: WindowResolution::default()
+                            .with_scale_factor_override(scale_factor),
+                        ..default()
+                    }),
                     ..default()
                 }),
         )
