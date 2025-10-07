@@ -322,7 +322,7 @@ mod ui_gizmos {
             .unwrap_or_default();
 
         for (computed_node, transform) in &nodes {
-            let positions = [
+            let physical_pos = [
                 Vec2::new(-0.5, -0.5),
                 Vec2::new(0.5, -0.5),
                 Vec2::new(0.5, 0.5),
@@ -330,14 +330,15 @@ mod ui_gizmos {
                 Vec2::new(-0.5, -0.5),
             ]
             .into_iter()
-            .map(|v| transform.transform_point2(v * computed_node.size) + viewport_position)
-            .map(|v| v * computed_node.inverse_scale_factor);
+            .map(|v| transform.transform_point2(v * computed_node.size) + viewport_position);
 
             gizmos.linestrip_2d(
-                positions
+                physical_pos
                     .map(|v| {
+                        let logical_viewport_pos =
+                            v / camera.target_scaling_factor().unwrap_or(1.0);
                         camera
-                            .viewport_to_world_2d(camera_transform, v)
+                            .viewport_to_world_2d(camera_transform, logical_viewport_pos)
                             .map_err(BevyError::from)
                     })
                     .collect::<Result<Vec<_>>>()?,
