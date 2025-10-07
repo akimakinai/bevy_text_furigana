@@ -325,8 +325,8 @@ mod ui_gizmos {
             ]
             .into_iter()
             .map(|v| {
-                transform
-                    .transform_point2(v * computed_node.size * computed_node.inverse_scale_factor)
+                transform.transform_point2(v * computed_node.size)
+                    * computed_node.inverse_scale_factor
             });
 
             gizmos.linestrip_2d(
