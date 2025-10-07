@@ -35,6 +35,7 @@ fn main() {
         .add_plugins(FuriganaPlugin)
         .add_systems(Startup, startup)
         .add_systems(Update, (update_ui_rotator, settings))
+        .add_plugins(ui_gizmos::plugin)
         .run();
 }
 
@@ -279,5 +280,54 @@ fn settings(key: Res<ButtonInput<Key>>, mut configs: ResMut<FuriganaSettings>) {
             "update_ui_global_transform: {}",
             configs.update_ui_global_transform
         );
+    }
+}
+
+mod ui_gizmos {
+    use bevy::{color::palettes::css::GREEN, input::keyboard::Key, prelude::*, ui::UiSystems};
+
+    pub fn plugin(app: &mut App) {
+        // Debug systems
+        app.init_resource::<EnableUiGizmos>()
+            .add_systems(Update, toggle_ui_gizmos)
+            .add_systems(
+                PostUpdate,
+                add_ui_gizmos
+                    .run_if(resource_equals(EnableUiGizmos(true)))
+                    .after(UiSystems::Layout),
+            );
+    }
+
+    #[derive(Resource, Default, PartialEq)]
+    struct EnableUiGizmos(bool);
+
+    fn toggle_ui_gizmos(key: Res<ButtonInput<Key>>, mut gizmos: ResMut<EnableUiGizmos>) {
+        if key.just_pressed(Key::Character("g".into())) {
+            gizmos.0 = !gizmos.0;
+            info!("UI gizmos: {}", if gizmos.0 { "on" } else { "off" });
+        }
+    }
+
+    fn add_ui_gizmos(
+        nodes: Query<(&ComputedNode, &UiGlobalTransform)>,
+        camera: Query<(&Camera, &GlobalTransform)>,
+        mut gizmos: Gizmos,
+    ) -> Result<()> {
+        let (camera, camera_transform) = camera.single()?;
+
+        for (computed_node, transform) in &nodes {
+            let (scale, angle, translation) = transform.to_scale_angle_translation();
+
+            let translation = translation * computed_node.inverse_scale_factor;
+            let translation = camera.viewport_to_world_2d(camera_transform, translation)?;
+
+            gizmos.rect_2d(
+                Isometry2d::new(translation, Rot2::from(-angle)),
+                computed_node.size * computed_node.inverse_scale_factor * scale,
+                GREEN,
+            )
+        }
+
+        Ok(())
     }
 }
