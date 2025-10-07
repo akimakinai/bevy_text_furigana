@@ -322,7 +322,10 @@ mod ui_gizmos {
             let translation = camera.viewport_to_world_2d(camera_transform, translation)?;
 
             gizmos.rect_2d(
-                Isometry2d::new(translation, Rot2::from(-angle)),
+                Isometry2d::new(
+                    translation,
+                    Rot2::from(camera_transform.rotation().to_scaled_axis().z - angle),
+                ),
                 computed_node.size * computed_node.inverse_scale_factor * scale,
                 GREEN,
             )
