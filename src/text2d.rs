@@ -17,12 +17,12 @@ pub struct RubyText2d(
 pub struct LinkedRubyText2d(Entity);
 
 impl LinkedRubyText2d {
-    pub fn entity(&self) -> Entity {
+    pub const fn entity(&self) -> Entity {
         self.0
     }
 }
 
-pub(crate) fn add_ruby_2d(
+pub fn add_ruby_2d(
     on: On<Add, Ruby>,
     ruby: Query<(&Ruby, &TextFont, &Transform, &TextColor), With<Text2d>>,
     commands: Commands,
@@ -40,7 +40,7 @@ pub(crate) fn add_ruby_2d(
     }
 }
 
-pub(crate) fn add_ruby_text_span_2d(
+pub fn add_ruby_text_span_2d(
     on: On<Add, Ruby>,
     ruby: Query<&Ruby, With<TextSpan>>,
     text_config: Query<(&TextFont, &TextColor)>,
@@ -99,30 +99,26 @@ fn ruby_text_font(text_font: &TextFont, font_size_scale: f32) -> TextFont {
     }
 }
 
-pub(crate) fn update_ruby_text_2d(
+pub fn update_ruby_text_2d(
     mut ruby_text: Query<(&RubyText2d, &mut Text2d, &mut TextFont, &mut TextColor), Without<Ruby>>,
     ruby: Query<(Ref<Ruby>, Ref<TextFont>, &TextColor)>,
 ) {
     for (&RubyText2d(rt_id), mut text, mut ruby_font, mut ruby_text_color) in &mut ruby_text {
         if let Ok((ruby, text_font, text_color)) = ruby.get(rt_id) {
             if ruby.is_changed() && text.0 != ruby.rt {
-                text.0 = ruby.rt.clone();
+                text.0.clone_from(&ruby.rt);
             }
 
             if text_font.is_changed() {
                 *ruby_font = ruby_text_font(&text_font, ruby.font_size_scale);
             }
 
-            *ruby_text_color = if let Some(set_color) = ruby.color {
-                set_color
-            } else {
-                *text_color
-            };
+            *ruby_text_color = ruby.color.unwrap_or(*text_color);
         }
     }
 }
 
-pub(crate) fn update_ruby_2d(
+pub fn update_ruby_2d(
     text_layouts: Query<&TextLayoutInfo>,
     ruby_query: Query<
         (
@@ -137,7 +133,7 @@ pub(crate) fn update_ruby_2d(
     _ancestors: Query<&ChildOf>,
     mut ruby_transforms: Query<&mut Transform, (With<RubyText2d>, Without<Ruby>)>,
     text_2d_transforms: Query<&GlobalTransform, With<Text2d>>,
-) -> Result<()> {
+) {
     for (ruby_entity, ruby, &LinkedRubyText2d(rt_id), child_of, is_text_span) in &ruby_query {
         let text_entity = if is_text_span {
             let Some(&ChildOf(parent)) = child_of else {
@@ -172,7 +168,7 @@ pub(crate) fn update_ruby_2d(
         let ruby_pos_local = Vec2::new(
             match ruby.align {
                 RubyAlign::Start => section_rect.min.x + ruby_layout_info.size.x / 2.0,
-                RubyAlign::Center => (section_rect.min.x + section_rect.max.x) / 2.0,
+                RubyAlign::Center => f32::midpoint(section_rect.min.x, section_rect.max.x),
                 RubyAlign::End => section_rect.max.x - ruby_layout_info.size.x / 2.0,
             },
             match ruby.position {
@@ -204,8 +200,6 @@ pub(crate) fn update_ruby_2d(
         transform.translation = ruby_pos_global;
         transform.rotation = ruby_rotation;
     }
-
-    Ok(())
 }
 
 #[cfg(test)]

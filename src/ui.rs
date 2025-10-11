@@ -18,12 +18,12 @@ pub struct RubyText(
 pub struct LinkedRubyText(Entity);
 
 impl LinkedRubyText {
-    pub fn entity(&self) -> Entity {
+    pub const fn entity(&self) -> Entity {
         self.0
     }
 }
 
-pub(crate) fn add_ruby(
+pub fn add_ruby(
     on: On<Add, Ruby>,
     ruby_ui: Query<(&Ruby, &TextFont, Option<&ChildOf>, &ZIndex, &TextColor), With<Text>>,
     commands: Commands,
@@ -43,7 +43,7 @@ pub(crate) fn add_ruby(
     }
 }
 
-pub(crate) fn add_ruby_text_span(
+pub fn add_ruby_text_span(
     on: On<Add, Ruby>,
     ruby: Query<&Ruby, With<TextSpan>>,
     text_config: Query<(&TextFont, &TextColor)>,
@@ -117,7 +117,7 @@ fn ruby_text_font(text_font: &TextFont, font_size_scale: f32) -> TextFont {
     }
 }
 
-pub(crate) fn update_ruby_text(
+pub fn update_ruby_text(
     mut ruby_text: Query<(&RubyText, &mut Text, &mut TextFont, &mut TextColor), Without<Ruby>>,
     ruby: Query<(Ref<Ruby>, Ref<TextFont>, &TextColor)>,
 ) {
@@ -131,16 +131,12 @@ pub(crate) fn update_ruby_text(
                 *ruby_font = ruby_text_font(&text_font, ruby.font_size_scale);
             }
 
-            *ruby_text_color = if let Some(set_color) = ruby.color {
-                set_color
-            } else {
-                *text_color
-            };
+            *ruby_text_color = ruby.color.unwrap_or(*text_color);
         }
     }
 }
 
-pub(crate) fn update_ruby(
+pub fn update_ruby(
     text_layouts: Query<&TextLayoutInfo>,
     mut node_query: Query<(&ComputedNode, &mut UiGlobalTransform, &mut UiTransform)>,
     ruby_query: Query<
@@ -156,7 +152,7 @@ pub(crate) fn update_ruby(
     ancestors: Query<&ChildOf>,
     mut ruby_nodes: Query<&mut Node, (With<RubyText>, Without<Ruby>)>,
     settings: Res<FuriganaSettings>,
-) -> Result<()> {
+) {
     for (text_entity, ruby, &LinkedRubyText(rt_id), child_of, is_text_span) in &ruby_query {
         let node_entity = if is_text_span {
             let Some(&ChildOf(parent)) = child_of else {
@@ -203,7 +199,7 @@ pub(crate) fn update_ruby(
         let ruby_pos_local_topleft = Vec2::new(
             match ruby.align {
                 RubyAlign::Start => section_rect.min.x + ruby_computed_node.size().x / 2.0,
-                RubyAlign::Center => (section_rect.min.x + section_rect.max.x) / 2.0,
+                RubyAlign::Center => f32::midpoint(section_rect.min.x, section_rect.max.x),
                 RubyAlign::End => section_rect.max.x - ruby_computed_node.size().x / 2.0,
             },
             match ruby.position {
@@ -245,8 +241,6 @@ pub(crate) fn update_ruby(
             node.left = new_left;
         }
     }
-
-    Ok(())
 }
 
 #[cfg(test)]
