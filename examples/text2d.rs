@@ -6,7 +6,7 @@ use bevy::{
 use bevy_text_furigana::*;
 
 fn main() {
-    let scale_factor = 1.0;
+    let scale_factor = 1.5;
     App::new()
         .add_plugins(
             DefaultPlugins
@@ -26,7 +26,44 @@ fn main() {
         .add_plugins(FuriganaPlugin)
         .add_systems(Startup, startup)
         .add_systems(Update, rotate_text)
+        .add_observer(drag_line)
         .run();
+}
+
+#[derive(Component)]
+#[require(ShowAabbGizmo)]
+struct Draggable;
+
+fn drag_line(
+    on: On<Pointer<Drag>>,
+    cameras: Query<(&Camera, &GlobalTransform)>,
+    aabbs: Query<(Entity, &bevy::camera::primitives::Aabb, &GlobalTransform), With<Draggable>>,
+    mut transform: Query<&mut Transform>,
+) -> Result<()> {
+    let (camera, camera_transform) = cameras.single()?;
+
+    let pointer = camera.viewport_to_world_2d(camera_transform, on.pointer_location.position)?;
+
+    let origin = camera.world_to_viewport(camera_transform, Vec3::ZERO)?;
+    let world_delta = camera.viewport_to_world_2d(camera_transform, origin + on.delta)?;
+
+    for (id, aabb, g_transform) in &aabbs {
+        let aabb = bevy::camera::primitives::Aabb {
+            center: aabb.center + g_transform.translation().to_vec3a(),
+            half_extents: aabb.half_extents,
+        };
+        if aabb.min().x <= pointer.x
+            && pointer.x <= aabb.max().x
+            && aabb.min().y <= pointer.y
+            && pointer.y <= aabb.max().y
+        {
+            let mut transform = transform.get_mut(id)?;
+            transform.translation.x += world_delta.x;
+            transform.translation.y += world_delta.y;
+        }
+    }
+
+    Ok(())
 }
 
 fn startup(mut commands: Commands, assets: Res<AssetServer>) {
@@ -140,6 +177,7 @@ fn startup(mut commands: Commands, assets: Res<AssetServer>) {
     ));
 
     commands.spawn((
+        Draggable,
         Text2d::default(),
         text_font.clone(),
         Transform::from_translation(Vec3::new(0.0, -200.0, 0.0)),
@@ -178,7 +216,13 @@ fn startup(mut commands: Commands, assets: Res<AssetServer>) {
         ],
     ));
 
-    commands.spawn((Camera2d, Camera::default()));
+    commands.spawn((
+        Camera2d,
+        Camera::default(),
+        Transform::from_translation(Vec3::new(0.0, 200.0, 0.0))
+            .with_rotation(Quat::from_rotation_z(-15.0f32.to_radians()))
+            .with_scale(Vec3::new(1.2, 1.2, 1.0)),
+    ));
 }
 
 #[derive(Component)]
