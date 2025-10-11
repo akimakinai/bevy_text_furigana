@@ -6,6 +6,7 @@ license = "MIT OR Apache-2.0"
 
 [features]
 text2d = ["bevy/bevy_sprite"]
+default = ["text2d"]
 
 [dependencies]
 bevy = { version = "0.17", default-features = false, features = [
@@ -13,7 +14,7 @@ bevy = { version = "0.17", default-features = false, features = [
     "bevy_text",
     "bevy_ui",
     "bevy_log",
-]}
+] }
 
 [dev-dependencies]
 bevy = "0.17"
