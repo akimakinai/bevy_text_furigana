@@ -172,13 +172,13 @@ pub fn update_ruby_2d(
     mut ruby_transforms: Query<&mut Transform, (With<RubyText2d>, Without<Ruby>)>,
     text_2d_transforms: Query<&GlobalTransform, With<Text2d>>,
 ) {
-    for (ruby_entity, ruby, &LinkedRubyText2d(rt_id), text_root) in &ruby_query {
-        let Some(text_entity) = text_root.get() else {
+    for (text_entity, ruby, &LinkedRubyText2d(rt_id), text_root) in &ruby_query {
+        let Some(text_root_id) = text_root.get() else {
             error!("No text root entity for {text_entity:?}");
             continue;
         };
 
-        let Ok((layout_info, visibility)) = text_layouts.get_mut(text_entity) else {
+        let Ok((layout_info, visibility)) = text_layouts.get_mut(text_root_id) else {
             continue;
         };
 
@@ -192,7 +192,7 @@ pub fn update_ruby_2d(
         let Some(section_rect) = layout_info
             .section_rects
             .iter()
-            .find(|&&(id, _)| id == ruby_entity)
+            .find(|&&(id, _)| id == text_entity)
             .map(|&(_, rect)| rect)
         else {
             continue;
@@ -230,7 +230,7 @@ pub fn update_ruby_2d(
         // Y+ down to Y+ up
         ruby_pos.y = -ruby_pos.y;
 
-        let Ok(text_global_transform) = text_2d_transforms.get(text_entity) else {
+        let Ok(text_global_transform) = text_2d_transforms.get(text_root_id) else {
             continue;
         };
 
