@@ -119,7 +119,7 @@ pub fn update_ruby_text_2d(
 }
 
 pub fn update_ruby_2d(
-    text_layouts: Query<&TextLayoutInfo>,
+    mut text_layouts: Query<(&TextLayoutInfo, &mut Visibility)>,
     ruby_query: Query<
         (
             Entity,
@@ -144,9 +144,16 @@ pub fn update_ruby_2d(
             ruby_entity
         };
 
-        let Ok(layout_info) = text_layouts.get(text_entity) else {
+        let Ok((layout_info, visibility)) = text_layouts.get_mut(text_entity) else {
             continue;
         };
+
+        if *visibility == Visibility::Hidden {
+            if let Ok((_, mut ruby_vis)) = text_layouts.get_mut(rt_id) {
+                ruby_vis.set_if_neq(Visibility::Hidden);
+            }
+            continue;
+        }
 
         let Some(section_rect) = layout_info
             .section_rects
@@ -160,10 +167,13 @@ pub fn update_ruby_2d(
             section_rect.min / layout_info.scale_factor,
             section_rect.max / layout_info.scale_factor,
         );
+        let text_layout_size = layout_info.size;
 
-        let Ok(ruby_layout_info) = text_layouts.get(rt_id) else {
+        let Ok((ruby_layout_info, mut vis)) = text_layouts.get_mut(rt_id) else {
             continue;
         };
+
+        vis.set_if_neq(Visibility::Inherited);
 
         let ruby_pos_local = Vec2::new(
             match ruby.align {
@@ -182,7 +192,7 @@ pub fn update_ruby_2d(
         };
 
         let mut ruby_pos =
-            ruby_pos_local.extend(transform.translation.z) - layout_info.size.extend(0.0) / 2.0;
+            ruby_pos_local.extend(transform.translation.z) - text_layout_size.extend(0.0) / 2.0;
         // Y+ down to Y+ up
         ruby_pos.y = -ruby_pos.y;
 

@@ -137,7 +137,7 @@ pub fn update_ruby_text(
 }
 
 pub fn update_ruby(
-    text_layouts: Query<&TextLayoutInfo>,
+    text_layouts: Query<(&TextLayoutInfo, &Node), Without<RubyText>>,
     mut node_query: Query<(&ComputedNode, &mut UiGlobalTransform, &mut UiTransform)>,
     ruby_query: Query<
         (
@@ -163,9 +163,17 @@ pub fn update_ruby(
             text_entity
         };
 
-        let Ok(layout_info) = text_layouts.get(node_entity) else {
+        let Ok((layout_info, node)) = text_layouts.get(node_entity) else {
             continue;
         };
+
+        if node.display == Display::None {
+            if let Ok(mut node) = ruby_nodes.get_mut(rt_id) {
+                node.display = Display::None;
+            }
+            continue;
+        }
+
         let Some(section_rect) = layout_info
             .section_rects
             .iter()
@@ -227,6 +235,10 @@ pub fn update_ruby(
             error!("No ruby text node for entity {:?}", rt_id);
             continue;
         };
+
+        if node.display != Display::default() {
+            node.display = Display::default();
+        }
 
         let ruby_top_left = parent_global.inverse().transform_point2(ruby_pos_global)
             + parent_computed.size() / 2.0

@@ -1,6 +1,6 @@
 use bevy::{
-    asset::UnapprovedPathMode, ecs::relationship::RelatedSpawnerCommands, prelude::*,
-    text::LineHeight, window::WindowResolution,
+    asset::UnapprovedPathMode, ecs::relationship::RelatedSpawnerCommands, input::keyboard::Key,
+    prelude::*, text::LineHeight, window::WindowResolution,
 };
 
 use bevy_text_furigana::*;
@@ -26,6 +26,7 @@ fn main() {
         .add_plugins(FuriganaPlugin)
         .add_systems(Startup, startup)
         .add_systems(Update, rotate_text)
+        .add_systems(Update, toggle_visibility)
         .run();
 }
 
@@ -147,6 +148,7 @@ fn startup(mut commands: Commands, assets: Res<AssetServer>) {
         Text2d::default(),
         text_font.clone(),
         Transform::from_translation(Vec3::new(0.0, -200.0, 0.0)),
+        ToggleVisibility,
         children![
             // Sampled from 探検実記
             (
@@ -192,5 +194,19 @@ fn rotate_text(mut query: Query<(&mut Transform, &mut TextRotator)>, time: Res<T
     for (mut transform, mut rotator) in &mut query {
         rotator.0 += time.delta_secs() * 30.0;
         transform.rotation = Quat::from_rotation_z(rotator.0.to_radians());
+    }
+}
+
+#[derive(Component)]
+struct ToggleVisibility;
+
+fn toggle_visibility(
+    mut query: Query<&mut Visibility, With<ToggleVisibility>>,
+    key: Res<ButtonInput<Key>>,
+) {
+    if key.just_pressed(Key::Character("v".into())) {
+        for mut vis in &mut query {
+            vis.toggle_inherited_hidden();
+        }
     }
 }

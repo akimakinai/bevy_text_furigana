@@ -35,6 +35,7 @@ fn main() {
         .add_plugins(FuriganaPlugin)
         .add_systems(Startup, startup)
         .add_systems(Update, (update_ui_rotator, settings))
+        .add_systems(Update, toggle_display)
         .add_plugins(ui_gizmos::plugin)
         .run();
 }
@@ -146,6 +147,7 @@ fn startup(mut commands: Commands, assets: Res<AssetServer>) {
                     rt: "consectetur adipiscing elit".into(),
                     ..default()
                 },
+                ToggleDisplay,
             ));
 
             parent.spawn((
@@ -284,6 +286,21 @@ fn settings(key: Res<ButtonInput<Key>>, mut configs: ResMut<FuriganaSettings>) {
             "update_ui_global_transform: {}",
             configs.update_ui_global_transform
         );
+    }
+}
+
+#[derive(Component)]
+struct ToggleDisplay;
+
+fn toggle_display(mut query: Query<&mut Node, With<ToggleDisplay>>, key: Res<ButtonInput<Key>>) {
+    if key.just_pressed(Key::Character("d".into())) {
+        for mut node in &mut query {
+            node.display = if node.display == Display::None {
+                Display::Flex
+            } else {
+                Display::None
+            };
+        }
     }
 }
 
