@@ -30,7 +30,11 @@ fn main() {
 }
 
 fn startup(mut commands: Commands, assets: Res<AssetServer>) {
+    #[cfg(target_os = "windows")]
     let font = assets.load(r"C:\Windows\Fonts\meiryo.ttc");
+    #[cfg(target_os = "macos")]
+    let font = assets.load("/System/Library/Fonts/ヒラギノ角ゴシック W3.ttc");
+
     let text_font = TextFont {
         font: font.clone(),
         font_size: 32.0,
