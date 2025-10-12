@@ -17,7 +17,13 @@ bevy = { version = "0.17", default-features = false, features = [
 ] }
 
 [dev-dependencies]
-bevy = "0.17"
+bevy = { version = "0.17", features = ["https", "web_asset_cache"] }
+
+[target.'cfg(not(target_family = "wasm"))'.dev-dependencies]
+ureq = { version = "3", default-features = false, features = [
+    "gzip",
+    "brotli",
+] }
 
 # Compile with Performance Optimizations:
 # <https://bevyengine.org/learn/quick-start/getting-started/setup/#compile-with-performance-optimizations>

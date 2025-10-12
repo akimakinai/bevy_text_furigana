@@ -31,10 +31,7 @@ fn main() {
 }
 
 fn startup(mut commands: Commands, assets: Res<AssetServer>) {
-    #[cfg(target_os = "windows")]
-    let font = assets.load(r"C:\Windows\Fonts\meiryo.ttc");
-    #[cfg(target_os = "macos")]
-    let font = assets.load("/System/Library/Fonts/ヒラギノ角ゴシック W3.ttc");
+    let font = assets.load("https://github.com/googlefonts/zen-marugothic/raw/refs/heads/main/fonts/ttf/ZenMaruGothic-Regular.ttf");
 
     let text_font = TextFont {
         font: font.clone(),
