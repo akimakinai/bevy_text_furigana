@@ -1,6 +1,16 @@
-use bevy::{math::Affine2, prelude::*, text::TextLayoutInfo};
+use bevy::{math::Affine2, prelude::*, text::TextLayoutInfo, ui::UiSystems};
 
-use crate::{FuriganaSettings, Ruby, RubyAlign, RubyPosition};
+use crate::{FuriganaSettings, Ruby, RubyAlign, RubyPosition, TextRootEntity};
+
+pub fn plugin(app: &mut App) {
+    app.add_systems(PostUpdate, update_ruby.after(UiSystems::Layout))
+        .add_systems(
+            PostUpdate,
+            (update_ruby_text, update_ruby_display).before(UiSystems::Content),
+        )
+        .add_observer(add_ruby)
+        .add_observer(add_ruby_text_span);
+}
 
 /// Component for UI ruby text.
 /// Automatically spawned when [`Ruby`] component is added along with `Text` or `TextSpan`.
@@ -136,34 +146,48 @@ pub fn update_ruby_text(
     }
 }
 
+pub fn update_ruby_display(
+    ruby_text: Query<&RubyText>,
+    text_root: Query<TextRootEntity>,
+    mut nodes: Query<Mut<Node>>,
+) {
+    for &RubyText(src_id) in &ruby_text {
+        let Some(text_root) = text_root.get(src_id).ok().and_then(|tr| tr.get()) else {
+            continue;
+        };
+
+        let Ok(text_root_node) = nodes.get(text_root) else {
+            continue;
+        };
+        if !text_root_node.is_changed() {
+            continue;
+        }
+
+        let display = text_root_node.display;
+
+        if let Ok(mut node) = nodes.get_mut(src_id)
+            && node.display != display
+        {
+            node.display = display;
+        }
+    }
+}
+
 pub fn update_ruby(
     text_layouts: Query<(&TextLayoutInfo, &Node), Without<RubyText>>,
     mut node_query: Query<(&ComputedNode, &mut UiGlobalTransform, &mut UiTransform)>,
-    ruby_query: Query<
-        (
-            Entity,
-            Ref<Ruby>,
-            &LinkedRubyText,
-            Option<&ChildOf>,
-            Has<TextSpan>,
-        ),
-        Without<RubyText>,
-    >,
+    ruby_query: Query<(Entity, Ref<Ruby>, &LinkedRubyText, TextRootEntity), Without<RubyText>>,
     ancestors: Query<&ChildOf>,
     mut ruby_nodes: Query<&mut Node, (With<RubyText>, Without<Ruby>)>,
     settings: Res<FuriganaSettings>,
 ) {
-    for (text_entity, ruby, &LinkedRubyText(rt_id), child_of, is_text_span) in &ruby_query {
-        let node_entity = if is_text_span {
-            let Some(&ChildOf(parent)) = child_of else {
-                continue;
-            };
-            parent
-        } else {
-            text_entity
+    for (text_entity, ruby, &LinkedRubyText(rt_id), text_root_node) in &ruby_query {
+        let Some(text_root_id) = text_root_node.get() else {
+            error!("No text root entity for {text_entity:?}");
+            continue;
         };
 
-        let Ok((layout_info, node)) = text_layouts.get(node_entity) else {
+        let Ok((layout_info, node)) = text_layouts.get(text_root_id) else {
             continue;
         };
 
@@ -184,7 +208,7 @@ pub fn update_ruby(
         };
 
         let (parent_global, parent_computed) = if let Ok(&ChildOf(node_parent)) =
-            ancestors.get(node_entity)
+            ancestors.get(text_root_id)
             && let Ok((parent_computed, parent_global, _)) = node_query.get(node_parent)
         {
             (*parent_global, *parent_computed)
@@ -193,7 +217,7 @@ pub fn update_ruby(
         };
 
         let Ok((&node_computed, &node_global_transform, &node_transform)) =
-            node_query.get(node_entity)
+            node_query.get(text_root_id)
         else {
             continue;
         };

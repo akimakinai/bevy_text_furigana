@@ -1,6 +1,23 @@
-use bevy::{prelude::*, text::TextLayoutInfo};
+use bevy::{
+    prelude::*,
+    text::{Text2dUpdateSystems, TextLayoutInfo},
+};
 
-use crate::{Ruby, RubyAlign, RubyPosition};
+use crate::{Ruby, RubyAlign, RubyPosition, TextRootEntity};
+
+pub fn plugin(app: &mut App) {
+    app.add_systems(
+        PostUpdate,
+        (
+            (update_ruby_2d_visibility, update_ruby_text_2d),
+            update_ruby_2d,
+        )
+            .chain()
+            .before(Text2dUpdateSystems),
+    )
+    .add_observer(add_ruby_2d)
+    .add_observer(add_ruby_text_span_2d);
+}
 
 /// Component for 2D ruby text.
 /// Automatically spawned when [`Ruby`] component is added along with `Text2d` or `TextSpan`.
@@ -118,30 +135,47 @@ pub fn update_ruby_text_2d(
     }
 }
 
+pub fn update_ruby_2d_visibility(
+    ruby_text: Query<(Entity, &RubyText2d)>,
+    text_root: Query<TextRootEntity>,
+    inherited_vis: Query<Ref<InheritedVisibility>>,
+    mut visibility: Query<&mut Visibility>,
+) {
+    for (rt_id, &RubyText2d(src_id)) in &ruby_text {
+        let Some(text_entity) = text_root.get(src_id).ok().and_then(|tr| tr.get()) else {
+            continue;
+        };
+
+        let Ok(src_vis) = inherited_vis.get(text_entity) else {
+            continue;
+        };
+
+        if !src_vis.is_changed() {
+            continue;
+        }
+
+        let src_vis = *src_vis;
+        if let Ok(mut rt_vis) = visibility.get_mut(rt_id) {
+            rt_vis.set_if_neq(if src_vis.get() {
+                Visibility::Inherited
+            } else {
+                Visibility::Hidden
+            });
+        }
+    }
+}
+
 pub fn update_ruby_2d(
     mut text_layouts: Query<(&TextLayoutInfo, &mut Visibility)>,
-    ruby_query: Query<
-        (
-            Entity,
-            Ref<Ruby>,
-            &LinkedRubyText2d,
-            Option<&ChildOf>,
-            Has<TextSpan>,
-        ),
-        Without<RubyText2d>,
-    >,
+    ruby_query: Query<(Entity, Ref<Ruby>, &LinkedRubyText2d, TextRootEntity), Without<RubyText2d>>,
     _ancestors: Query<&ChildOf>,
     mut ruby_transforms: Query<&mut Transform, (With<RubyText2d>, Without<Ruby>)>,
     text_2d_transforms: Query<&GlobalTransform, With<Text2d>>,
 ) {
-    for (ruby_entity, ruby, &LinkedRubyText2d(rt_id), child_of, is_text_span) in &ruby_query {
-        let text_entity = if is_text_span {
-            let Some(&ChildOf(parent)) = child_of else {
-                continue;
-            };
-            parent
-        } else {
-            ruby_entity
+    for (ruby_entity, ruby, &LinkedRubyText2d(rt_id), text_root) in &ruby_query {
+        let Some(text_entity) = text_root.get() else {
+            error!("No text root entity for {text_entity:?}");
+            continue;
         };
 
         let Ok((layout_info, visibility)) = text_layouts.get_mut(text_entity) else {

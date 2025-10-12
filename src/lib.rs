@@ -3,9 +3,7 @@
 mod text2d;
 mod ui;
 
-#[cfg(feature = "text2d")]
-use bevy::text::Text2dUpdateSystems;
-use bevy::{prelude::*, ui::UiSystems};
+use bevy::{ecs::query::QueryData, prelude::*};
 
 #[cfg(feature = "text2d")]
 pub use text2d::{LinkedRubyText2d, RubyText2d};
@@ -15,23 +13,12 @@ pub struct FuriganaPlugin;
 
 impl Plugin for FuriganaPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<FuriganaSettings>()
-            .add_systems(PostUpdate, ui::update_ruby.after(UiSystems::Layout))
-            .add_systems(PostUpdate, ui::update_ruby_text.before(UiSystems::Layout))
-            .add_observer(ui::add_ruby)
-            .add_observer(ui::add_ruby_text_span);
+        app.init_resource::<FuriganaSettings>();
+
+        app.add_plugins(ui::plugin);
 
         #[cfg(feature = "text2d")]
-        app.add_systems(
-            PostUpdate,
-            text2d::update_ruby_2d.before(Text2dUpdateSystems),
-        )
-        .add_systems(
-            PostUpdate,
-            text2d::update_ruby_text_2d.after(Text2dUpdateSystems),
-        )
-        .add_observer(text2d::add_ruby_2d)
-        .add_observer(text2d::add_ruby_text_span_2d);
+        app.add_plugins(text2d::plugin);
     }
 }
 
@@ -108,4 +95,21 @@ pub enum RubyAlign {
     ///
     /// <ruby style="ruby-align: end"><rb>Lorem ipsum</rb><rt>Ruby</rt></ruby>
     End,
+}
+
+#[derive(QueryData)]
+struct TextRootEntity {
+    this: Entity,
+    child_of: Option<&'static ChildOf>,
+    is_text_span: Has<TextSpan>,
+}
+
+impl<'w, 's> TextRootEntityItem<'w, 's> {
+    fn get(&self) -> Option<Entity> {
+        if self.is_text_span {
+            self.child_of.map(ChildOf::parent)
+        } else {
+            Some(self.this)
+        }
+    }
 }
