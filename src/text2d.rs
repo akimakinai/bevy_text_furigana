@@ -44,17 +44,19 @@ pub fn add_ruby_2d(
     ruby: Query<(&Ruby, &TextFont, &Transform, &TextColor), With<Text2d>>,
     commands: Commands,
 ) {
-    if let Ok((ruby, text_font, transform, text_color)) = ruby.get(on.entity) {
-        create_ruby_text_2d(
-            on,
-            commands,
-            ruby,
-            text_font,
-            ruby.font_size_scale,
-            transform,
-            *text_color,
-        );
-    }
+    let Ok((ruby, text_font, transform, text_color)) = ruby.get(on.entity) else {
+        return;
+    };
+
+    create_ruby_text_2d(
+        on,
+        commands,
+        ruby,
+        text_font,
+        ruby.font_size_scale,
+        transform,
+        *text_color,
+    );
 }
 
 pub fn add_ruby_text_span_2d(
@@ -65,29 +67,31 @@ pub fn add_ruby_text_span_2d(
     text_2d: Query<&Transform, With<Text2d>>,
     commands: Commands,
 ) {
-    if let Ok(ruby) = ruby.get(on.entity) {
-        let Ok(&ChildOf(parent)) = ancestors.get(on.entity) else {
-            return;
-        };
+    let Ok(ruby) = ruby.get(on.entity) else {
+        return;
+    };
 
-        let Ok((text_font, color)) = text_config.get(on.entity) else {
-            return;
-        };
+    let Ok(&ChildOf(parent)) = ancestors.get(on.entity) else {
+        return;
+    };
 
-        let Ok(transform) = text_2d.get(parent) else {
-            return;
-        };
+    let Ok((text_font, color)) = text_config.get(on.entity) else {
+        return;
+    };
 
-        create_ruby_text_2d(
-            on,
-            commands,
-            ruby,
-            text_font,
-            ruby.font_size_scale,
-            transform,
-            *color,
-        );
-    }
+    let Ok(transform) = text_2d.get(parent) else {
+        return;
+    };
+
+    create_ruby_text_2d(
+        on,
+        commands,
+        ruby,
+        text_font,
+        ruby.font_size_scale,
+        transform,
+        *color,
+    );
 }
 
 fn create_ruby_text_2d(
@@ -121,17 +125,19 @@ pub fn update_ruby_text_2d(
     ruby: Query<(Ref<Ruby>, Ref<TextFont>, &TextColor)>,
 ) {
     for (&RubyText2d(rt_id), mut text, mut ruby_font, mut ruby_text_color) in &mut ruby_text {
-        if let Ok((ruby, text_font, text_color)) = ruby.get(rt_id) {
-            if ruby.is_changed() && text.0 != ruby.rt {
-                text.0.clone_from(&ruby.rt);
-            }
+        let Ok((ruby, text_font, text_color)) = ruby.get(rt_id) else {
+            continue;
+        };
 
-            if text_font.is_changed() {
-                *ruby_font = ruby_text_font(&text_font, ruby.font_size_scale);
-            }
-
-            *ruby_text_color = ruby.color.unwrap_or(*text_color);
+        if ruby.is_changed() && text.0 != ruby.rt {
+            text.0.clone_from(&ruby.rt);
         }
+
+        if text_font.is_changed() {
+            *ruby_font = ruby_text_font(&text_font, ruby.font_size_scale);
+        }
+
+        *ruby_text_color = ruby.color.unwrap_or(*text_color);
     }
 }
 

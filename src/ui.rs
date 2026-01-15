@@ -43,19 +43,20 @@ pub fn add_ruby(
     ruby_ui: Query<(&Ruby, &TextFont, Option<&ChildOf>, &ZIndex, &TextColor), With<Text>>,
     commands: Commands,
 ) {
-    if let Ok((ruby, text_font, child_of, &z_index, text_color)) = ruby_ui.get(on.entity) {
-        let parent = child_of.map(ChildOf::parent);
-        create_ruby_text(
-            on,
-            commands,
-            parent,
-            ruby,
-            text_font,
-            ruby.font_size_scale,
-            z_index,
-            *text_color,
-        );
-    }
+    let Ok((ruby, text_font, child_of, &z_index, text_color)) = ruby_ui.get(on.entity) else {
+        return;
+    };
+    let parent = child_of.map(ChildOf::parent);
+    create_ruby_text(
+        on,
+        commands,
+        parent,
+        ruby,
+        text_font,
+        ruby.font_size_scale,
+        z_index,
+        *text_color,
+    );
 }
 
 pub fn add_ruby_text_span(
@@ -66,34 +67,36 @@ pub fn add_ruby_text_span(
     nodes: Query<&ZIndex, (With<Node>, With<Text>)>,
     commands: Commands,
 ) {
-    if let Ok(ruby) = ruby.get(on.entity) {
-        let Ok(&ChildOf(parent)) = ancestors.get(on.entity) else {
-            return;
-        };
+    let Ok(ruby) = ruby.get(on.entity) else {
+        return;
+    };
 
-        // ZIndex is a required component of `Node`
-        let Ok(&z_index) = nodes.get(parent) else {
-            // Not a UI text span
-            return;
-        };
+    let Ok(&ChildOf(parent)) = ancestors.get(on.entity) else {
+        return;
+    };
 
-        let Ok((text_font, color)) = text_config.get(on.entity) else {
-            return;
-        };
+    // ZIndex is a required component of `Node`
+    let Ok(&z_index) = nodes.get(parent) else {
+        // Not a UI text span
+        return;
+    };
 
-        let grandparent = ancestors.get(parent).ok().map(ChildOf::parent);
+    let Ok((text_font, color)) = text_config.get(on.entity) else {
+        return;
+    };
 
-        create_ruby_text(
-            on,
-            commands,
-            grandparent,
-            ruby,
-            text_font,
-            ruby.font_size_scale,
-            z_index,
-            *color,
-        );
-    }
+    let grandparent = ancestors.get(parent).ok().map(ChildOf::parent);
+
+    create_ruby_text(
+        on,
+        commands,
+        grandparent,
+        ruby,
+        text_font,
+        ruby.font_size_scale,
+        z_index,
+        *color,
+    );
 }
 
 fn create_ruby_text(
@@ -137,17 +140,19 @@ pub fn update_ruby_text(
     ruby: Query<(Ref<Ruby>, Ref<TextFont>, &TextColor)>,
 ) {
     for (&RubyText(rt_id), mut text, mut ruby_font, mut ruby_text_color) in &mut ruby_text {
-        if let Ok((ruby, text_font, text_color)) = ruby.get(rt_id) {
-            if ruby.is_changed() && text.0 != ruby.rt {
-                text.0 = ruby.rt.clone();
-            }
+        let Ok((ruby, text_font, text_color)) = ruby.get(rt_id) else {
+            continue;
+        };
 
-            if text_font.is_changed() {
-                *ruby_font = ruby_text_font(&text_font, ruby.font_size_scale);
-            }
-
-            *ruby_text_color = ruby.color.unwrap_or(*text_color);
+        if ruby.is_changed() && text.0 != ruby.rt {
+            text.0 = ruby.rt.clone();
         }
+
+        if text_font.is_changed() {
+            *ruby_font = ruby_text_font(&text_font, ruby.font_size_scale);
+        }
+
+        *ruby_text_color = ruby.color.unwrap_or(*text_color);
     }
 }
 
