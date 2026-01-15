@@ -1,6 +1,6 @@
 use bevy::{
     prelude::*,
-    text::{Text2dUpdateSystems, TextLayoutInfo},
+    text::{ComputedTextBlock, Text2dUpdateSystems, TextLayoutInfo},
 };
 
 use crate::{Ruby, RubyAlign, RubyPosition, TextRootEntity};
@@ -166,7 +166,7 @@ pub fn update_ruby_2d_visibility(
 }
 
 pub fn update_ruby_2d(
-    mut text_layouts: Query<(&TextLayoutInfo, &mut Visibility)>,
+    mut text_layouts: Query<(&TextLayoutInfo, &ComputedTextBlock, &mut Visibility)>,
     ruby_query: Query<(Entity, Ref<Ruby>, &LinkedRubyText2d, TextRootEntity), Without<RubyText2d>>,
     _ancestors: Query<&ChildOf>,
     mut ruby_transforms: Query<&mut Transform, (With<RubyText2d>, Without<Ruby>)>,
@@ -178,22 +178,23 @@ pub fn update_ruby_2d(
             continue;
         };
 
-        let Ok((layout_info, visibility)) = text_layouts.get_mut(text_root_id) else {
+        let Ok((layout_info, text_block, visibility)) = text_layouts.get_mut(text_root_id) else {
             continue;
         };
 
         if *visibility == Visibility::Hidden {
-            if let Ok((_, mut ruby_vis)) = text_layouts.get_mut(rt_id) {
+            if let Ok((_, _, mut ruby_vis)) = text_layouts.get_mut(rt_id) {
                 ruby_vis.set_if_neq(Visibility::Hidden);
             }
             continue;
         }
 
+        let entities = text_block.entities();
         let Some(section_rect) = layout_info
-            .section_rects
+            .run_geometry
             .iter()
-            .find(|&&(id, _)| id == text_entity)
-            .map(|&(_, rect)| rect)
+            .find(|g| entities[g.span_index].entity == text_entity)
+            .map(|g| g.bounds)
         else {
             continue;
         };
@@ -203,7 +204,7 @@ pub fn update_ruby_2d(
         );
         let text_layout_size = layout_info.size;
 
-        let Ok((ruby_layout_info, mut vis)) = text_layouts.get_mut(rt_id) else {
+        let Ok((ruby_layout_info, _, mut vis)) = text_layouts.get_mut(rt_id) else {
             continue;
         };
 

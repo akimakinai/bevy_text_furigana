@@ -9,15 +9,12 @@ text2d = ["bevy/bevy_sprite"]
 default = ["text2d"]
 
 [dependencies]
-bevy = { version = "0.17", default-features = false, features = [
-    "std",
-    "bevy_text",
-    "bevy_ui",
-    "bevy_log",
+bevy = { version = "0.18", default-features = false, features = [
+    "2d_api", "2d_bevy_render", "ui_api", "ui_bevy_render",
 ] }
 
 [dev-dependencies]
-bevy = { version = "0.17", features = ["https", "web_asset_cache"] }
+bevy = { version = "0.18", features = ["default_app", "default_platform", "https", "web_asset_cache"] }
 
 [target.'cfg(not(target_family = "wasm"))'.dev-dependencies]
 ureq = { version = "3", default-features = false, features = [

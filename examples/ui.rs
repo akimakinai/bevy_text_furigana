@@ -1,7 +1,7 @@
 use bevy::{
     asset::UnapprovedPathMode,
     ecs::relationship::RelatedSpawnerCommands,
-    input::keyboard::Key,
+    input::{common_conditions::input_just_pressed, keyboard::Key},
     log::{DEFAULT_FILTER, LogPlugin},
     prelude::*,
     text::LineHeight,
@@ -35,7 +35,10 @@ fn main() {
         .add_plugins(FuriganaPlugin)
         .add_systems(Startup, startup)
         .add_systems(Update, (update_ui_rotator, settings))
-        .add_systems(Update, toggle_display)
+        .add_systems(
+            Update,
+            toggle_display.run_if(input_just_pressed(Key::Character("d".into()))),
+        )
         .add_plugins(ui_gizmos::plugin)
         .run();
 }
@@ -45,7 +48,6 @@ fn startup(mut commands: Commands, assets: Res<AssetServer>) {
 
     let text_font = TextFont {
         font: font.clone(),
-        line_height: LineHeight::RelativeToFont(1.6),
         ..default()
     };
 
@@ -57,6 +59,7 @@ fn startup(mut commands: Commands, assets: Res<AssetServer>) {
                 spawner.spawn((
                     TextSpan::new(text),
                     text_font.clone(),
+                    LineHeight::RelativeToFont(1.6),
                     Ruby {
                         rt: rt.into(),
                         position,

@@ -36,7 +36,6 @@ fn startup(mut commands: Commands, assets: Res<AssetServer>) {
     let text_font = TextFont {
         font: font.clone(),
         font_size: 32.0,
-        line_height: LineHeight::RelativeToFont(1.6),
         ..default()
     };
 
@@ -48,6 +47,7 @@ fn startup(mut commands: Commands, assets: Res<AssetServer>) {
                 spawner.spawn((
                     TextSpan::new(text),
                     text_font.clone(),
+                    LineHeight::RelativeToFont(1.6),
                     Ruby {
                         rt: rt.into(),
                         position,

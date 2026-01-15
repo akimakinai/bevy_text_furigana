@@ -1,4 +1,9 @@
-use bevy::{math::Affine2, prelude::*, text::TextLayoutInfo, ui::UiSystems};
+use bevy::{
+    math::Affine2,
+    prelude::*,
+    text::{ComputedTextBlock, TextLayoutInfo},
+    ui::UiSystems,
+};
 
 use crate::{FuriganaSettings, Ruby, RubyAlign, RubyPosition, TextRootEntity};
 
@@ -174,7 +179,7 @@ pub fn update_ruby_display(
 }
 
 pub fn update_ruby(
-    text_layouts: Query<(&TextLayoutInfo, &Node), Without<RubyText>>,
+    text_layouts: Query<(&TextLayoutInfo, Option<&ComputedTextBlock>, &Node), Without<RubyText>>,
     mut node_query: Query<(&ComputedNode, &mut UiGlobalTransform, &mut UiTransform)>,
     ruby_query: Query<(Entity, Ref<Ruby>, &LinkedRubyText, TextRootEntity), Without<RubyText>>,
     ancestors: Query<&ChildOf>,
@@ -187,7 +192,7 @@ pub fn update_ruby(
             continue;
         };
 
-        let Ok((layout_info, node)) = text_layouts.get(text_root_id) else {
+        let Ok((layout_info, Some(text_block), node)) = text_layouts.get(text_root_id) else {
             continue;
         };
 
@@ -198,11 +203,12 @@ pub fn update_ruby(
             continue;
         }
 
+        let entities = text_block.entities();
         let Some(section_rect) = layout_info
-            .section_rects
+            .run_geometry
             .iter()
-            .find(|&&(id, _)| id == text_entity)
-            .map(|&(_, rect)| rect)
+            .find(|g| entities[g.span_index].entity == text_entity)
+            .map(|g| g.bounds)
         else {
             continue;
         };
@@ -266,7 +272,10 @@ pub fn update_ruby(
 
         let ruby_top_left = parent_global.inverse().transform_point2(ruby_pos_global)
             + parent_computed.size() / 2.0
-            - Vec2::new(parent_computed.border().left, parent_computed.border().top)
+            - Vec2::new(
+                parent_computed.border().min_inset.x,
+                parent_computed.border().min_inset.y,
+            )
             - ruby_computed_node.size() / 2.0;
         let new_top = Val::Px(ruby_top_left.y * parent_computed.inverse_scale_factor);
         let new_left = Val::Px(ruby_top_left.x * parent_computed.inverse_scale_factor);
